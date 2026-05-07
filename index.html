@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Student UniDash | Pro</title>
-    
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -22,6 +22,7 @@
                 <li><button class="nav-btn active" onclick="showSection('overview', this)"><i class="fa-solid fa-house"></i> Overview</button></li>
                 <li><button class="nav-btn" onclick="showSection('canvas', this)"><i class="fa-solid fa-book"></i> Canvas</button></li>
                 <li><button class="nav-btn" onclick="showSection('hac', this)"><i class="fa-solid fa-chart-simple"></i> HAC Grades</button></li>
+                <li><button class="nav-btn" onclick="showSection('gmail', this)"><i class="fa-solid fa-envelope"></i> Gmail</button></li>
                 <li><button class="nav-btn" onclick="showSection('browser', this)"><i class="fa-solid fa-globe"></i> App Browser</button></li>
             </ul>
             <div class="user-profile">
@@ -46,7 +47,11 @@
                         <strong>Live Data Disconnected</strong>
                         <p>Authorize this app via Canvas and Google Drive to sync your data.</p>
                     </div>
-                    <button id="auth-btn"><i class="fa-brands fa-google"></i> Connect</button>
+                    <div id="g_id_onload"
+                        data-client_id="218198682167-8u3rjqchskh0q1f5nnbahs43hddaa51h.apps.googleusercontent.com"
+                        data-callback="handleCredentialResponse">
+                    </div>
+                    <div class="g_id_signin" data-type="standard"></div>
                 </div>
 
                 <div class="quick-stats card-grid">
@@ -70,6 +75,20 @@
                 </header>
                 <div id="canvas-data" class="card-grid">
                     </div>
+            </section>
+
+            <section id="gmail" class="hidden-section">
+                <header class="section-header">
+                    <h1>Recent Emails</h1>
+                    <p>Your latest messages from your Google Workspace.</p>
+                </header>
+    
+                <button id="auth-gmail-btn" onclick="authorizeGmail()" style="margin-bottom: 20px; padding: 10px 20px; background-color: var(--accent-color); color: var(--bg-color); border: none; border-radius: 8px; font-weight: bold; cursor: pointer;">
+                <i class="fa-brands fa-google"></i> Authorize Gmail Access
+                </button>
+
+                <div id="gmail-data" style="display: flex; flex-direction: column; gap: 15px;">
+                </div>
             </section>
 
             <section id="hac" class="hidden-section">
