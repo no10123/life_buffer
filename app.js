@@ -126,7 +126,7 @@ function handleCredentialResponse(response) {
 }
 
 // --- Google API Logic ---
-const CLIENT_ID = 'YOUR_GOOGLE_CLIENT_ID_HERE'; // PASTE YOUR CLIENT ID HERE!
+const CLIENT_ID = '218198682167-8u3rjqchskh0q1f5nnbahs43hddaa51h.apps.googleusercontent.com'; // PASTE YOUR CLIENT ID HERE!
 const SCOPES = 'https://www.googleapis.com/auth/gmail.readonly';
 
 let tokenClient;
@@ -148,38 +148,71 @@ window.onload = function () {
 };
 
 function authorizeGmail() {
-    // This triggers the Google popup asking for permission to read emails
+    // If we haven't built the tokenClient yet, build it now
+    if (!tokenClient) {
+        try {
+            tokenClient = google.accounts.oauth2.initTokenClient({
+                client_id: CLIENT_ID,
+                scope: SCOPES,
+                callback: (tokenResponse) => {
+                    if (tokenResponse && tokenResponse.access_token) {
+                        accessToken = tokenResponse.access_token;
+                        document.getElementById('auth-gmail-btn').style.display = 'none';
+                        fetchEmails(); 
+                    }
+                },
+            });
+        } catch (error) {
+            console.error("Google library not loaded yet!", error);
+            alert("Google login is still loading. Please try again in a second.");
+            return;
+        }
+    }
+    
+    // Trigger the popup
     tokenClient.requestAccessToken();
 }
 
-async function fetchEmails() {
+let nextPageToken = null; 
+// Keeps track of where we left off
+async function fetchEmails(loadMore = false) {
     const gmailContainer = document.getElementById('gmail-data');
-    gmailContainer.innerHTML = '<p style="color: var(--text-muted);"><i class="fa-solid fa-spinner fa-spin"></i> Fetching your latest emails...</p>';
+    
+    if (!loadMore) {
+        gmailContainer.innerHTML = '<p style="color: var(--text-muted);"><i class="fa-solid fa-spinner fa-spin"></i> Fetching your inbox...</p>';
+    }
 
     if (!accessToken) return;
 
     try {
-        // 1. Ask Google for a list of the 5 most recent message IDs
-        const listResponse = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=5', {
+        // Build the URL, adding the page token if we are loading more
+        let url = 'https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=10';
+        if (loadMore && nextPageToken) {
+            url += `&pageToken=${nextPageToken}`;
+        }
+
+        const listResponse = await fetch(url, {
             headers: { Authorization: `Bearer ${accessToken}` }
         });
         const listData = await listResponse.json();
 
+        if (!loadMore) gmailContainer.innerHTML = ''; // Clear loading text
+        
+        // Save the token for the next batch
+        nextPageToken = listData.nextPageToken || null;
+
         if (!listData.messages || listData.messages.length === 0) {
-            gmailContainer.innerHTML = '<p>Your inbox is empty!</p>';
+            gmailContainer.innerHTML += '<p>No more emails found.</p>';
             return;
         }
 
-        gmailContainer.innerHTML = ''; // Clear loading text
-
-        // 2. Loop through each message ID and fetch its details
+        // Fetch details for each message (requesting "full" format now)
         for (const message of listData.messages) {
-            const msgResponse = await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/messages/${message.id}?format=metadata&metadataHeaders=Subject&metadataHeaders=From`, {
+            const msgResponse = await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/messages/${message.id}?format=full`, {
                 headers: { Authorization: `Bearer ${accessToken}` }
             });
             const msgData = await msgResponse.json();
 
-            // Extract Subject and Sender from the messy metadata headers
             let subject = "No Subject";
             let from = "Unknown Sender";
             
@@ -188,21 +221,91 @@ async function fetchEmails() {
                 if (header.name === 'From') from = header.value;
             });
 
-            // 3. Create the UI card for the email
+            // Extract the body using our helper function
+            const fullBody = getEmailBody(msgData.payload);
+
             const card = document.createElement('div');
             card.className = 'card animate-slide-up';
+            card.style.cursor = 'pointer'; // Make it look clickable
+            
+            // The Header (Clickable) + The Hidden Body
             card.innerHTML = `
-                <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
-                    <i class="fa-solid fa-envelope-open-text" style="color: var(--accent-color); font-size: 20px;"></i>
-                    <h3 style="margin: 0; font-size: 18px;">${subject}</h3>
+                <div onclick="toggleEmail(this)">
+                    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
+                        <i class="fa-solid fa-envelope" style="color: var(--primary); font-size: 20px;"></i>
+                        <h3 style="margin: 0; font-size: 16px;">${subject}</h3>
+                    </div>
+                    <p style="color: var(--text-muted); font-size: 14px; margin: 0;"><strong>From:</strong> ${from}</p>
                 </div>
-                <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 8px;"><strong>From:</strong> ${from}</p>
-                <p style="font-size: 14px;">${msgData.snippet}...</p>
+                <div class="email-body-content" style="display: none;">
+                    ${fullBody}
+                </div>
             `;
             gmailContainer.appendChild(card);
         }
+
+        // Add or update the "Load More" button at the bottom
+        const oldBtn = document.getElementById('load-more-btn');
+        if (oldBtn) oldBtn.remove();
+
+        if (nextPageToken) {
+            const loadBtn = document.createElement('button');
+            loadBtn.id = 'load-more-btn';
+            loadBtn.innerText = 'Load More Emails';
+            loadBtn.style = "padding: 10px; background: var(--primary); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; margin-top: 10px;";
+            loadBtn.onclick = () => fetchEmails(true);
+            gmailContainer.appendChild(loadBtn);
+        }
+
     } catch (error) {
         console.error("Error fetching emails:", error);
-        gmailContainer.innerHTML = '<p style="color: var(--warning);">Failed to fetch emails. Check the console for details.</p>';
+        gmailContainer.innerHTML += '<p style="color: var(--warning);">Failed to load emails.</p>';
+    }
+}
+
+// Decodes Google's specific Base64URL format
+function decodeBase64(str) {
+    try {
+        const base64 = str.replace(/-/g, '+').replace(/_/g, '/');
+        return decodeURIComponent(escape(window.atob(base64)));
+    } catch (e) {
+        return "Error decoding email body.";
+    }
+}
+
+// Digs through the email payload to find the actual text or HTML
+function getEmailBody(payload) {
+    let bodyText = '';
+    
+    if (payload.parts) {
+        // Look for plain text first to keep the UI clean, fallback to HTML
+        let part = payload.parts.find(p => p.mimeType === 'text/plain') || 
+                   payload.parts.find(p => p.mimeType === 'text/html');
+        
+        if (part && part.body && part.body.data) {
+            bodyText = decodeBase64(part.body.data);
+        } else {
+            // If it's deeply nested, dig deeper
+            for (let subPart of payload.parts) {
+                if (subPart.parts) {
+                    let nestedBody = getEmailBody(subPart);
+                    if (nestedBody) return nestedBody;
+                }
+            }
+        }
+    } else if (payload.body && payload.body.data) {
+        bodyText = decodeBase64(payload.body.data);
+    }
+    
+    return bodyText || "No readable content found.";
+}
+
+// Toggles the email body open and closed
+function toggleEmail(element) {
+    const bodyDiv = element.nextElementSibling;
+    if (bodyDiv.style.display === "none") {
+        bodyDiv.style.display = "block";
+    } else {
+        bodyDiv.style.display = "none";
     }
 }
