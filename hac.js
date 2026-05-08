@@ -1,20 +1,49 @@
 // ==========================================
 // 6. HAC (HOME ACCESS CENTER) LOGIC
 // ==========================================
+// Called by loadPage('hac') — show login if not authed, grades if already fetched
+
+const HAC_PROXY_URL = "https://glowing-barnacle-xjrp9q6r7j9h9pq5-3000.app.github.dev";
+const HAC_PROXY = HAC_PROXY_URL;
+
 //const API_BASE = 'http://localhost:3000/hac'; // Adjust if your server is on a different port/host
 //let sessionId = ''; // We use sessionId now instead of raw cookies
-const HAC_BASE  = 'https://accesscenter.roundrockisd.org/HomeAccess';
-const HAC_PROXY = 'https://glowing-barnacle-xjrp9q6r7j9h9pq5-3000.app.github.dev/';
+const crypto = require('crypto');
 
 let hacCookies = ''; // session cookies forwarded as header
 
-// Called by loadPage('hac') — show login if not authed, grades if already fetched
-function loadHacData() {
-    if (hacCookies) {
-        showHacGradesPanel();
-        fetchHacGrades();
+
+async function loadHacData() {
+    const container = document.getElementById('main-content-area');
+    // Safety: Clear out any old, broken session strings
+    const sessionId = localStorage.getItem('hacSessionId');
+
+    if (!sessionId || sessionId.includes('http')) {
+        localStorage.removeItem('hacSessionId'); // Clean up if it saved a URL by mistake
+        showHacLogin();
+        return;
     }
-    // else: login panel is already visible by default in hac.html
+
+    container.innerHTML = `<div class="card"><p><i class="fa-solid fa-spinner fa-spin"></i> Fetching grades...</p></div>`;
+
+    try {
+        // Explicitly put the / after the PROXY_URL
+        const endpoint = `${HAC_PROXY_URL}/hac/grades?sessionId=${sessionId}`;
+        console.log("Fetching from:", endpoint); // Check this in your green console!
+
+        const response = await fetch(endpoint);
+        
+        if (!response.ok) {
+            throw new Error(`Proxy returned ${response.status}`);
+        }
+
+        const data = await response.json();
+        renderHacGrades(data.courses);
+    } catch (err) {
+        console.error("HAC Fetch Error:", err.message);
+        // If it's a 404, the path /hac/grades might be misspelled in server.js or here
+        container.innerHTML = `<div class="card"><h3>Connection Error</h3><p>${err.message}</p></div>`;
+    }
 }
 
 async function hacLogin() {
@@ -33,7 +62,7 @@ async function hacLogin() {
     try {
         // Step 1: GET login page → scrape __RequestVerificationToken
         setHacLoadingMsg('Fetching login token...');
-        const loginPageRes = await fetch(HAC_PROXY + encodeURIComponent(`${HAC_BASE}/Account/LogOn`));
+        const loginPageRes = await fetch(HAC_PROXY + encodeURIComponent(`${HAC_PROXY_URL}/Account/LogOn`));
         if (!loginPageRes.ok) throw new Error(`Proxy returned ${loginPageRes.status}. Try again shortly.`);
 
         const loginPageHtml = await loginPageRes.text();
@@ -58,7 +87,7 @@ async function hacLogin() {
             'LogOnDetails.Password': pass,
         });
 
-        const loginRes = await fetch(HAC_PROXY + encodeURIComponent(`${HAC_BASE}/Account/LogOn`), {
+        const loginRes = await fetch(HAC_PROXY + encodeURIComponent(`${HAC_PROXY_URL}/Account/LogOn`), {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
@@ -91,7 +120,7 @@ async function fetchHacGrades() {
     showHacLoading('Loading your grades...');
 
     try {
-        const res = await fetch(HAC_PROXY + encodeURIComponent(`${HAC_BASE}/Classes/Classwork`), {
+        const res = await fetch(HAC_PROXY + encodeURIComponent(`${HAC_PROXY_URL}/Classes/Classwork`), {
             headers: { 'X-Corsproxy-Cookie': hacCookies }
         });
 
