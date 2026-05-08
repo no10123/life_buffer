@@ -3,6 +3,55 @@
 // ==========================================
 applySavedSettings(); // Run immediately on load
 
+// Add these to the top of app.js (global scope)
+let gapiInited = false;
+let gisInited = false;
+let tokenClient;
+
+// Update your loadPage function's specific logic:
+// Inside your loadPage function, find the 'if (page === "drive")' block:
+if (page === 'drive') {
+    maybeEnableButtons(); 
+}
+
+// Update this function to be more "aggressive"
+function maybeEnableButtons() {
+    const authBtn = document.getElementById('authorize_button');
+    const signoutBtn = document.getElementById('signout_button');
+
+    if (gapiInited && gisInited && authBtn) {
+        authBtn.style.display = 'inline-block';
+        
+        // If we already have a token, show signout and list files
+        if (gapi.client.getToken() !== null) {
+            if (signoutBtn) signoutBtn.style.display = 'inline-block';
+            listFiles();
+        }
+    } else {
+        console.log("Drive scripts or buttons not ready yet...");
+    }
+}
+
+function gapiLoaded() {
+    gapi.load('client', async () => {
+        await gapi.client.init({
+            discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'],
+        });
+        gapiInited = true;
+        maybeEnableButtons();
+    });
+}
+
+function gisLoaded() {
+    tokenClient = google.accounts.oauth2.initTokenClient({
+        client_id: '218198682167-8u3rjqchskh0q1f5nnbahs43hddaa51h.apps.googleusercontent.com',
+        scope: 'https://www.googleapis.com/auth/drive.metadata.readonly',
+        callback: '', // defined later in handleAuthClick
+    });
+    gisInited = true;
+    maybeEnableButtons();
+}
+
 function initSettings() {
     document.getElementById('set-title').value = document.title;
     document.getElementById('set-primary-color').value = localStorage.getItem('themePrimary') || '#0056b3';
@@ -73,6 +122,16 @@ async function loadPage(page, btn) {
             if (authBtn && accessToken) authBtn.style.display = 'none';
             if (accessToken) fetchEmails();
         }
+
+        // ... inside your loadPage function, after contentArea.innerHTML = html;
+        console.log(`Checking for Drive buttons on page: ${page}`);
+
+        if (page === 'drive') {
+            // We use a tiny timeout to ensure the HTML is fully painted in the browser
+            setTimeout(() => {
+                maybeEnableButtons();
+            }, 100); 
+        }
         
         if (page === 'canvas') loadCanvasData();
         if (page === 'hac') loadHacData();
@@ -89,13 +148,33 @@ async function loadPage(page, btn) {
     }
 }
 
+function maybeEnableButtons() {
+    const authBtn = document.getElementById('authorize_button');
+    const signoutBtn = document.getElementById('signout_button');
+
+    console.log(`Internal Status - GAPI: ${gapiInited}, GIS: ${gisInited}, ButtonFound: ${!!authBtn}`);
+
+    if (authBtn) {
+        if (gapiInited && gisInited) {
+            authBtn.style.display = 'inline-block';
+            authBtn.style.visibility = 'visible'; // Extra safety
+            
+            if (gapi.client.getToken() !== null) {
+                if (signoutBtn) signoutBtn.style.display = 'inline-block';
+                listFiles();
+            }
+        } else {
+            console.log("Google Scripts are still loading...");
+        }
+    }
+}
+
 // ==========================================
 // 3. GOOGLE AUTH & GMAIL LOGIC
 // ==========================================
 const CLIENT_ID = '218198682167-8u3rjqchskh0q1f5nnbahs43hddaa51h.apps.googleusercontent.com'; 
 const SCOPES = 'https://www.googleapis.com/auth/gmail.readonly';
 
-let tokenClient;
 let accessToken = null;
 let nextPageToken = null; 
 
@@ -139,6 +218,29 @@ function decodeBase64(str) {
         return "<i>Error decoding email text.</i>";
     }
 }
+
+window.handleAuthClick = function() {
+    console.log("Authorize button clicked!");
+    if (!tokenClient) {
+        console.error("Token client not initialized yet.");
+        return;
+    }
+
+    tokenClient.callback = async (resp) => {
+        if (resp.error !== undefined) {
+            throw (resp);
+        }
+        document.getElementById('signout_button').style.display = 'inline-block';
+        document.getElementById('authorize_button').innerText = 'Refresh Token';
+        await listFiles();
+    };
+
+    if (gapi.client.getToken() === null) {
+        tokenClient.requestAccessToken({prompt: 'consent'});
+    } else {
+        tokenClient.requestAccessToken({prompt: ''});
+    }
+};
 
 function getEmailBody(payload) {
     let bodyText = '';
@@ -469,4 +571,26 @@ function renderPlaylist() {
 function toggleConsole() {
     const DC = document.getElementById("debug-console");
     DC.style.display = DC.style.display === "none" ? "block" : "none";
+}
+
+function maybeEnableButtons() {
+    const authBtn = document.getElementById('authorize_button');
+    const signoutBtn = document.getElementById('signout_button');
+
+    if (authBtn && signoutBtn) {
+        if (gapiInited && gisInited) {
+            authBtn.style.display = 'inline-block';
+            
+            // Change this: Always show signout if you want to see it now, 
+            // or keep it like this to only show when logged in:
+            if (gapi.client.getToken() !== null) {
+                signoutBtn.style.display = 'inline-block';
+            }
+        }
+    }
+}
+
+if (page === 'drive') {
+    maybeEnableButtons(); // Show buttons if scripts already loaded
+    if (gapi.client.getToken()) listFiles(); // Load files if already logged in
 }
