@@ -305,19 +305,6 @@ function loadCanvasData() {
     }, 800);
 }
 
-function loadHacData() {
-    const container = document.getElementById('hac-data');
-    if(!container || container.children.length > 0) return;
-    container.innerHTML = '<p style="grid-column: 1/-1; text-align: center; color: var(--text-muted);"><i class="fa-solid fa-spinner fa-spin"></i> Syncing with HAC...</p>';
-
-    setTimeout(() => {
-        container.innerHTML = `
-            <div class="card animate-slide-up"><h3>AP US History</h3><h2 style="color: var(--success); font-size: 2.5rem; margin-top: 10px; font-weight: 700;">94%</h2></div>
-            <div class="card animate-slide-up" style="animation-delay: 0.1s;"><h3>Calculus</h3><h2 style="color: var(--warning); font-size: 2.5rem; margin-top: 10px; font-weight: 700;">88%</h2></div>
-        `;
-    }, 1000);
-}
-
 function loadIframeApp() {
     const selector = document.getElementById('app-selector');
     const iframe = document.getElementById('app-frame');

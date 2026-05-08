@@ -1,8 +1,60 @@
 <section id="hac">
     <header class="section-header">
-        <h1>HAC Grades</h1>
-        <p>Your live academic performance.</p>
+        <h1><i class="fa-solid fa-chart-simple" style="color:var(--primary);"></i> HAC Grades</h1>
+        <p>Live grades from Home Access Center (RRISD)</p>
     </header>
-    <div id="hac-data" class="card-grid">
+
+    <!-- LOGIN PANEL -->
+    <div id="hac-login-panel" class="card" style="max-width: 460px; margin: 0 auto;">
+        <h3 style="margin-bottom:6px;">Sign In to HAC</h3>
+        <p style="color:var(--text-muted); font-size:13px; margin-bottom:20px;">
+            Your credentials are only used to contact RRISD directly and are never stored.
+        </p>
+
+        <div style="display:flex; flex-direction:column; gap:14px;">
+            <div>
+                <label style="font-size:13px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:5px;">Username</label>
+                <input id="hac-username" type="text" placeholder="HAC Username"
+                    style="width:100%; padding:10px 14px; border:1px solid #e2e8f0; border-radius:8px; font-size:14px; outline:none;">
+            </div>
+            <div>
+                <label style="font-size:13px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:5px;">Password</label>
+                <input id="hac-password" type="password" placeholder="HAC Password"
+                    style="width:100%; padding:10px 14px; border:1px solid #e2e8f0; border-radius:8px; font-size:14px; outline:none;">
+            </div>
+            <button onclick="hacLogin()"
+                style="padding:12px; background:var(--primary); color:white; border:none; border-radius:8px; font-size:15px; font-weight:600; cursor:pointer; transition:background 0.2s;"
+                onmouseover="this.style.background='var(--primary-hover)'" onmouseout="this.style.background='var(--primary)'">
+                <i class="fa-solid fa-right-to-bracket"></i> Fetch My Grades
+            </button>
+            <p id="hac-login-error" style="color:var(--warning); font-size:13px; text-align:center; display:none;"></p>
         </div>
+
+        <div style="margin-top:18px; padding:12px; background:#f8fafc; border-radius:8px; font-size:12px; color:var(--text-muted);">
+            <i class="fa-solid fa-circle-info" style="color:var(--primary);"></i>
+            Requests are proxied through <strong>corsproxy.io</strong> to reach RRISD servers from the browser.
+            If login fails, the proxy may be temporarily unavailable — try again in a moment.
+        </div>
+    </div>
+
+    <!-- LOADING STATE -->
+    <div id="hac-loading" style="display:none; text-align:center; padding:60px 0;">
+        <i class="fa-solid fa-spinner fa-spin" style="font-size:36px; color:var(--primary);"></i>
+        <p id="hac-loading-msg" style="margin-top:16px; color:var(--text-muted); font-size:15px;">Connecting to HAC...</p>
+    </div>
+
+    <!-- GRADES OUTPUT -->
+    <div id="hac-grades-panel" style="display:none;">
+        <!-- Summary Bar -->
+        <div id="hac-summary" style="display:flex; align-items:center; gap:12px; margin-bottom:28px; flex-wrap:wrap;">
+            <!-- injected by JS -->
+        </div>
+        <!-- Course Cards Grid -->
+        <div id="hac-data" class="card-grid"></div>
+
+        <button onclick="hacLogout()"
+            style="margin-top:28px; padding:10px 20px; background:transparent; color:var(--text-muted); border:1px solid #e2e8f0; border-radius:8px; cursor:pointer; font-size:13px;">
+            <i class="fa-solid fa-right-from-bracket"></i> Sign Out of HAC
+        </button>
+    </div>
 </section>
