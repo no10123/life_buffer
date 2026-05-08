@@ -4,7 +4,7 @@
 //const API_BASE = 'http://localhost:3000/hac'; // Adjust if your server is on a different port/host
 //let sessionId = ''; // We use sessionId now instead of raw cookies
 const HAC_BASE  = 'https://accesscenter.roundrockisd.org/HomeAccess';
-const HAC_PROXY = 'https://corsproxy.io/?url=';
+const HAC_PROXY = 'https://glowing-barnacle-xjrp9q6r7j9h9pq5-3000.app.github.dev/';
 
 let hacCookies = ''; // session cookies forwarded as header
 

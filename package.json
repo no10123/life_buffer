@@ -1,0 +1,29 @@
+{
+  "name": "life_buffer",
+  "version": "1.0.0",
+  "description": "all the apps in the pages are the diffrent stuff",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/no10123/life_buffer.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/no10123/life_buffer/issues"
+  },
+  "homepage": "https://github.com/no10123/life_buffer#readme",
+  "dependencies": {
+    "axios-cookiejar-support": "^7.0.0",
+    "cheerio": "^1.2.0",
+    "cors": "^2.8.6",
+    "express": "^5.2.1",
+    "tough-cookie": "^6.0.1"
+  }
+}
