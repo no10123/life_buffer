@@ -1,6 +1,8 @@
 // ==========================================
 // 6. HAC (HOME ACCESS CENTER) LOGIC
 // ==========================================
+//const API_BASE = 'http://localhost:3000/hac'; // Adjust if your server is on a different port/host
+//let sessionId = ''; // We use sessionId now instead of raw cookies
 const HAC_BASE  = 'https://accesscenter.roundrockisd.org/HomeAccess';
 const HAC_PROXY = 'https://corsproxy.io/?url=';
 

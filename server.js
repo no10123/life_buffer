@@ -1,0 +1,241 @@
+/**
+ * UniDash HAC Proxy — GitHub Codespaces
+ * Node.js replication of ironmike1974/RRISD-HAC-Reminders (C# → JS)
+ * 
+ * Endpoints:
+ *   POST   /hac/login            → { sessionId }
+ *   GET    /hac/grades           → { courses[] }
+ *   GET    /hac/students         → { students[] }
+ *   POST   /hac/change-student   → { success }
+ *   DELETE /hac/logout           → { success }
+ *   GET    /health               → { ok }
+ */
+
+const express  = require('express');
+const axios    = require('axios');
+const { wrapper }    = require('axios-cookiejar-support');
+const { CookieJar }  = require('tough-cookie');
+const cheerio  = require('cheerio');
+const cors     = require('cors');
+
+const app      = express();
+const HAC_BASE = 'https://accesscenter.roundrockisd.org/HomeAccess';
+
+app.use(cors());           // Allow your UniDash origin
+app.use(express.json());
+
+// ------------------------------------------------------------------
+// In-memory sessions:  sessionId → { jar, baseUrl }
+// Mirrors C#'s CookieContainer pattern from the original library
+// ------------------------------------------------------------------
+const sessions = {};
+
+function makeClient(jar) {
+    return wrapper(axios.create({
+        jar,
+        withCredentials: true,
+        maxRedirects: 10,
+        headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36',
+            'Accept-Language': 'en-US,en;q=0.9',
+        }
+    }));
+}
+
+// ------------------------------------------------------------------
+// POST /hac/login
+// Body: { username, password }
+// Mirrors: HAC.login(username, password, out CookieContainer)
+// ------------------------------------------------------------------
+app.post('/hac/login', async (req, res) => {
+    const { username, password } = req.body;
+    if (!username || !password)
+        return res.status(400).json({ error: 'Missing credentials' });
+
+    try {
+        const jar    = new CookieJar();
+        const client = makeClient(jar);
+
+        // Step 1: GET login page → scrape anti-forgery token
+        const loginPage = await client.get(`${HAC_BASE}/Account/LogOn`);
+        const $         = cheerio.load(loginPage.data);
+        const token     = $('input[name="__RequestVerificationToken"]').val();
+        if (!token) throw new Error('Verification token not found — HAC page may have changed.');
+
+        // Step 2: POST credentials  (same fields the C# lib sends)
+        const body = new URLSearchParams({
+            '__RequestVerificationToken'  : token,
+            'SCKTY00328510CustomEnabled'  : 'False',
+            'SCKTY00436568CustomEnabled'  : 'False',
+            'Database'                    : '10',
+            'VerificationOption'          : 'UsernamePassword',
+            'LogOnDetails.UserName'       : username,
+            'LogOnDetails.Password'       : password,
+        });
+
+        const loginRes  = await client.post(`${HAC_BASE}/Account/LogOn`, body.toString(), {
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+        });
+
+        // Step 3: Detect failure (HAC shows "Invalid" message on bad creds)
+        const $login = cheerio.load(loginRes.data);
+        const errMsg = $login('.validation-summary-errors li').text().trim();
+        if (errMsg) return res.status(401).json({ error: errMsg || 'Invalid username or password.' });
+
+        // Step 4: Derive the canonical base URL from the post-login redirect
+        const responseUrl = loginRes.request?.res?.responseUrl || loginRes.config?.url || HAC_BASE;
+        const parsedBase  = new URL(responseUrl);
+        const baseUrl     = `${parsedBase.protocol}//${parsedBase.host}/HomeAccess`;
+
+        const sessionId = crypto.randomUUID();
+        sessions[sessionId] = { jar, baseUrl };
+
+        console.log(`[+] Login OK for user "${username}" → session ${sessionId}`);
+        res.json({ sessionId, success: true });
+
+    } catch (err) {
+        console.error('[login]', err.message);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ------------------------------------------------------------------
+// GET /hac/grades?sessionId=xxx
+// Mirrors: HAC.getAssignments() + AssignmentUtils.organizeAssignments()
+// ------------------------------------------------------------------
+app.get('/hac/grades', async (req, res) => {
+    const session = sessions[req.query.sessionId];
+    if (!session) return res.status(401).json({ error: 'Session not found. Please log in again.' });
+
+    try {
+        const client   = makeClient(session.jar);
+        const response = await client.get(`${session.baseUrl}/Classes/Classwork`);
+        const courses  = parseGrades(response.data);
+        res.json({ courses });
+    } catch (err) {
+        console.error('[grades]', err.message);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ------------------------------------------------------------------
+// GET /hac/students?sessionId=xxx
+// Mirrors: HAC.getStudents()
+// ------------------------------------------------------------------
+app.get('/hac/students', async (req, res) => {
+    const session = sessions[req.query.sessionId];
+    if (!session) return res.status(401).json({ error: 'Session not found.' });
+
+    try {
+        const client   = makeClient(session.jar);
+        // The student switcher lives in the top nav dropdown
+        const response = await client.get(`${session.baseUrl}/Home/WeekView`);
+        const $        = cheerio.load(response.data);
+
+        const students = [];
+        // HAC renders student list as <li data-student-id="...">
+        $('[data-student-id]').each((_, el) => {
+            const id   = $(el).attr('data-student-id') || $(el).val();
+            const name = $(el).find('.sg-student-name, .sg-header-sub').first().text().trim()
+                      || $(el).text().trim();
+            if (id) students.push({ id, name });
+        });
+
+        // Fallback: check the <select> student picker if the above finds nothing
+        if (!students.length) {
+            $('select[name*="student"] option, select[id*="student"] option').each((_, el) => {
+                const id   = $(el).attr('value');
+                const name = $(el).text().trim();
+                if (id && name) students.push({ id, name });
+            });
+        }
+
+        res.json({ students });
+    } catch (err) {
+        console.error('[students]', err.message);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ------------------------------------------------------------------
+// POST /hac/change-student
+// Body: { sessionId, studentId }
+// Mirrors: HAC.changeStudent(studentId, cookieContainer, responseUri)
+// ------------------------------------------------------------------
+app.post('/hac/change-student', async (req, res) => {
+    const { sessionId, studentId } = req.body;
+    const session = sessions[sessionId];
+    if (!session) return res.status(401).json({ error: 'Session not found.' });
+
+    try {
+        const client = makeClient(session.jar);
+        await client.get(`${session.baseUrl}/Home/ChangeStudent?studentId=${encodeURIComponent(studentId)}`);
+        console.log(`[~] Switched to student ID ${studentId}`);
+        res.json({ success: true });
+    } catch (err) {
+        console.error('[change-student]', err.message);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ------------------------------------------------------------------
+// DELETE /hac/logout
+// Body: { sessionId }
+// ------------------------------------------------------------------
+app.delete('/hac/logout', (req, res) => {
+    const { sessionId } = req.body;
+    if (sessionId && sessions[sessionId]) {
+        delete sessions[sessionId];
+        console.log(`[-] Session ${sessionId} destroyed`);
+    }
+    res.json({ success: true });
+});
+
+// Health check — lets UniDash verify the proxy is alive
+app.get('/health', (_, res) => res.json({ ok: true, sessions: Object.keys(sessions).length }));
+
+// ------------------------------------------------------------------
+// HTML PARSER — mirrors C# getAssignments() + organizeAssignments()
+// ------------------------------------------------------------------
+function parseGrades(html) {
+    const $       = cheerio.load(html);
+    const courses = [];
+
+    $('.AssignmentClass').each((_, block) => {
+        const hdrCells   = $(block).find('.ClassHeader tr td');
+        const courseName = $(hdrCells[0]).text().trim() || 'Unknown';
+        const average    = $(hdrCells[1]).text().trim() || '—';
+        const teacher    = $(hdrCells[2]).text().trim() || '';
+        const period     = $(hdrCells[3]).text().trim() || '';
+
+        const assignments = [];
+        $(block).find('.AssignmentRow').each((_, row) => {
+            const cols = $(row).find('td');
+            assignments.push({
+                name     : $(cols[0]).text().trim(),
+                dateAssigned: $(cols[1]).text().trim(),
+                due      : $(cols[2]).text().trim(),
+                category : $(cols[3]).text().trim(),
+                score    : $(cols[4]).text().trim(),
+                max      : $(cols[5]).text().trim(),
+                // Computed % — mirrors (assignment.points/assignment.maxPoints)*100
+                pct      : computePct($(cols[4]).text().trim(), $(cols[5]).text().trim()),
+            });
+        });
+
+        courses.push({ courseName, average, teacher, period, assignments });
+    });
+
+    return courses;
+}
+
+function computePct(score, max) {
+    const s = parseFloat(score);
+    const m = parseFloat(max);
+    if (isNaN(s) || isNaN(m) || m === 0) return null;
+    return Math.round((s / m) * 1000) / 10; // one decimal
+}
+
+// ------------------------------------------------------------------
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`✓ HAC Proxy listening on port ${PORT}`));
