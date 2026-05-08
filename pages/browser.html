@@ -1,0 +1,16 @@
+<section id="browser">
+    <header class="section-header">
+        <h1>App Viewer</h1>
+    </header>
+    <div class="browser-controls">
+        <i class="fa-solid fa-link"></i>
+        <select id="app-selector" onchange="loadIframeApp()">
+            <option value="">Select a Web App...</option>
+            <option value="https://wikipedia.org">Wikipedia</option>
+            <option value="https://desmos.com/calculator">Desmos Calculator</option>
+        </select>
+    </div>
+    <div class="iframe-container">
+        <iframe id="app-frame" src="" frameborder="0" title="In-App Browser"></iframe>
+    </div>
+</section>

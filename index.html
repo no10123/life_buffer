@@ -4,12 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Student UniDash | Pro</title>
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://accounts.google.com/gsi/client" async defer></script>
-    
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -20,12 +17,20 @@
                 <h2>UniDash</h2>
             </div>
             <ul>
-                <li><button class="nav-btn active" onclick="showSection('overview', this)"><i class="fa-solid fa-house"></i> Overview</button></li>
-                <li><button class="nav-btn" onclick="showSection('canvas', this)"><i class="fa-solid fa-book"></i> Canvas</button></li>
-                <li><button class="nav-btn" onclick="showSection('hac', this)"><i class="fa-solid fa-chart-simple"></i> HAC Grades</button></li>
-                <li><button class="nav-btn" onclick="showSection('gmail', this)"><i class="fa-solid fa-envelope"></i> Gmail</button></li>
-                <li><button class="nav-btn" onclick="showSection('browser', this)"><i class="fa-solid fa-globe"></i> App Browser</button></li>
+                <li><button class="nav-btn active" onclick="loadPage('overview', this)"><i class="fa-solid fa-house"></i> Overview</button></li>
+                <li><button class="nav-btn" onclick="loadPage('canvas', this)"><i class="fa-solid fa-book"></i> Canvas</button></li>
+                <li><button class="nav-btn" onclick="loadPage('hac', this)"><i class="fa-solid fa-chart-simple"></i> HAC Grades</button></li>
+                <li><button class="nav-btn" onclick="loadPage('gmail', this)"><i class="fa-solid fa-envelope"></i> Gmail</button></li>
+                <li><button class="nav-btn" onclick="loadPage('browser', this)"><i class="fa-solid fa-globe"></i> App Browser</button></li>
+                <li><button class="nav-btn" onclick="loadPage('playlist', this)"><i class="fa-solid fa-music"></i> Playlist</button></li>
+                <li><button class="nav-btn" onclick="loadPage('settings', this)"><i class="fa-solid fa-gear"></i> Settings</button></li>
             </ul>
+
+            <div class="mini-player" style="padding: 15px; border-top: 1px solid rgba(255,255,255,0.1); margin-top: auto;">
+                <p id="now-playing-title" style="font-size: 12px; margin-bottom: 8px; color: #cbd5e1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Not Playing</p>
+                <audio id="main-audio-player" style="display: none;"></audio>
+            </div>
+
             <div class="user-profile">
                 <div class="avatar"><i class="fa-solid fa-user"></i></div>
                 <div class="user-info">
@@ -35,91 +40,46 @@
             </div>
         </nav>
 
-        <main class="content">
-            <section id="overview" class="active-section animate-fade-in">
-                <header class="section-header">
-                    <h1>Welcome Back! 👋</h1>
-                    <p>Your unified educational hub is ready.</p>
-                </header>
-                
-                <div class="auth-warning">
-                    <div class="warning-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
-                    <div class="warning-text">
-                        <strong>Live Data Disconnected</strong>
-                        <p>Authorize this app via Canvas and Google Drive to sync your data.</p>
-                    </div>
-                    <div id="g_id_onload"
-                        data-client_id="218198682167-8u3rjqchskh0q1f5nnbahs43hddaa51h.apps.googleusercontent.com"
-                        data-callback="handleCredentialResponse">
-                    </div>
-                    <div class="g_id_signin" data-type="standard"></div>
-                </div>
-
-                <div class="quick-stats card-grid">
-                    <div class="stat-card">
-                        <i class="fa-solid fa-list-check" style="color: var(--primary);"></i>
-                        <h3>3</h3>
-                        <p>Tasks Due Today</p>
-                    </div>
-                    <div class="stat-card">
-                        <i class="fa-solid fa-envelope" style="color: var(--secondary);"></i>
-                        <h3>2</h3>
-                        <p>Unread Announcements</p>
-                    </div>
-                </div>
-            </section>
-
-            <section id="canvas" class="hidden-section">
-                <header class="section-header">
-                    <h1>Canvas Assignments</h1>
-                    <p>Track your upcoming homework and projects.</p>
-                </header>
-                <div id="canvas-data" class="card-grid">
-                    </div>
-            </section>
-
-            <section id="gmail" class="hidden-section">
-                <header class="section-header">
-                    <h1>Recent Emails</h1>
-                    <p>Your latest messages from your Google Workspace.</p>
-                </header>
-    
-                <button id="auth-gmail-btn" onclick="authorizeGmail()" style="margin-bottom: 20px; padding: 10px 20px; background-color: var(--primary); color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px;">
-                    <i class="fa-brands fa-google"></i> Authorize Gmail Access
-                </button>
-
-                <div id="gmail-data" style="display: flex; flex-direction: column; gap: 15px;">
-                </div>
-            </section>
-
-            <section id="hac" class="hidden-section">
-                <header class="section-header">
-                    <h1>HAC Grades</h1>
-                    <p>Your live academic performance.</p>
-                </header>
-                <div id="hac-data" class="card-grid">
-                    </div>
-            </section>
-
-            <section id="browser" class="hidden-section">
-                <header class="section-header">
-                    <h1>App Viewer</h1>
-                </header>
-                <div class="browser-controls">
-                    <i class="fa-solid fa-link"></i>
-                    <select id="app-selector" onchange="loadIframeApp()">
-                        <option value="">Select a Web App...</option>
-                        <option value="https://wikipedia.org">Wikipedia</option>
-                        <option value="https://desmos.com/calculator">Desmos Calculator</option>
-                    </select>
-                </div>
-                <div class="iframe-container">
-                    <iframe id="app-frame" src="" frameborder="0" title="In-App Browser"></iframe>
-                </div>
-            </section>
+        <main class="content" id="main-content-area">
         </main>
     </div>
 
     <script src="app.js"></script>
+    <script>
+        // Automatically load the Overview page when the shell loads
+        window.addEventListener('DOMContentLoaded', () => {
+            loadPage('overview', document.querySelector('.nav-btn.active'));
+        });
+    </script>
+    
+    <div id="debug-console" style="position: fixed; bottom: 0; right: 0; width: 300px; max-height: 200px; background: rgba(0,0,0,0.8); color: #00ff00; font-family: monospace; font-size: 10px; padding: 10px; overflow-y: auto; z-index: 9999; border-top-left-radius: 8px; pointer-events: none;">
+        <div style="border-bottom: 1px solid #333; margin-bottom: 5px; font-weight: bold;">SYSTEM LOGS</div>
+        <div id="debug-logs"></div>
+    </div>
+    
+    <script>
+        const logContainer = document.getElementById('debug-logs');
+        const originalLog = console.log;
+        const originalError = console.error;
+    
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            const el = document.createElement('div');
+            el.innerText = "> " + args.join(' ');
+            logContainer.appendChild(el);
+            logContainer.scrollTop = logContainer.scrollHeight;
+        };
+    
+        console.error = function(...args) {
+            originalError.apply(console, args);
+            const el = document.createElement('div');
+            el.style.color = "#ff4444";
+            el.innerText = "[ERROR] " + args.join(' ');
+            logContainer.appendChild(el);
+            logContainer.scrollTop = logContainer.scrollHeight;
+        };
+        
+        console.log("Debugger Initialized");
+    </script>
 </body>
 </html>

@@ -1,0 +1,39 @@
+<section id="settings" class="settings-container">
+    <header class="section-header">
+        <h1>Dashboard Settings</h1>
+        <p>Customize your experience.</p>
+    </header>
+
+    <div class="card">
+        <h3><i class="fa-solid fa-palette"></i> Appearance</h3>
+        <div style="display: flex; flex-direction: column; gap: 15px; margin-top: 15px;">
+            <label>
+                <strong>Page Title:</strong><br>
+                <input type="text" id="set-title" placeholder="UniDash" oninput="updateSettings()" style="padding: 5px; border-radius: 4px; border: 1px solid #ccc; width: 100%; max-width: 300px;">
+            </label>
+            <label>
+                <strong>Primary Color:</strong><br>
+                <input type="color" id="set-primary-color" value="#0056b3" onchange="updateSettings()" style="cursor: pointer;">
+            </label>
+            <label>
+                <strong>Accent Color:</strong><br>
+                <input type="color" id="set-accent-color" value="#00a8ff" onchange="updateSettings()" style="cursor: pointer;">
+            </label>
+            <label>
+                <strong>Font Size:</strong><br>
+                <select id="set-font-size" onchange="updateSettings()" style="padding: 5px; border-radius: 4px; cursor: pointer;">
+                    <option value="14px">Small</option>
+                    <option value="16px" selected>Normal</option>
+                    <option value="18px">Large</option>
+                </select>
+            </label>
+        </div>
+    </div>
+
+    <div class="card" style="margin-top: 20px;">
+        <h3><i class="fa-solid fa-shield-halved"></i> Account Controls</h3>
+        <button onclick="signOutGoogle()" style="margin-top: 15px; padding: 10px 20px; background: var(--warning); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; display: flex; align-items: center; gap: 8px;">
+            <i class="fa-solid fa-arrow-right-from-bracket"></i> Sign Out of Google
+        </button>
+    </div>
+</section>
