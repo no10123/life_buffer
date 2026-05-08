@@ -35,40 +35,56 @@ function applySavedSettings() {
 // ==========================================
 // 2. DYNAMIC PAGE ROUTING (SPA LOGIC)
 // ==========================================
-async function loadPage(pageId, btnElement) {
-    // Update Sidebar Active States
-    const navButtons = document.querySelectorAll('.nav-btn');
-    navButtons.forEach(btn => btn.classList.remove('active'));
-    if (btnElement) btnElement.classList.add('active');
-
+async function loadPage(page, btn) {
+    // 1. Use your original ID so we don't break the HTML connection
     const contentArea = document.getElementById('main-content-area'); 
+    if (!contentArea) {
+        console.error("CRITICAL: Element 'main-content-area' not found in index.html");
+        return;
+    }
+
+    // 2. Update Sidebar Active States (from old version)
+    const navButtons = document.querySelectorAll('.nav-btn');
+    navButtons.forEach(b => b.classList.remove('active'));
+    if (btn) btn.classList.add('active');
 
     try {
-        const response = await fetch(`pages/${pageId}.html`);
+        // 3. Fetch with Cache Buster (?v=...) to force browser to see your changes
+        const response = await fetch(`pages/${page}.html?v=${Date.now()}`);
         if (!response.ok) throw new Error("Page not found");
         
         const html = await response.text();
         
+        // 4. Inject HTML
         contentArea.innerHTML = html;
+
+        // 5. Keep your Animation logic (from old version)
         contentArea.classList.remove('animate-fade-in');
         void contentArea.offsetWidth; // Force reflow
         contentArea.classList.add('animate-fade-in');
 
-        // Trigger specific data fetches if authorized
-        if (pageId === 'gmail' && accessToken) {
-            document.getElementById('auth-gmail-btn').style.display = 'none';
-            fetchEmails();
+        // 6. Log to your new Green Debug Console
+        console.log(`Successfully loaded: ${page}.html`);
+
+        // 7. Page-Specific Logic (Combined)
+        if (page === 'gmail') {
+            // Check if login button exists before trying to hide it
+            const authBtn = document.getElementById('auth-gmail-btn');
+            if (authBtn && accessToken) authBtn.style.display = 'none';
+            if (accessToken) fetchEmails();
         }
-        if (pageId === 'canvas') loadCanvasData();
-        if (pageId === 'hac') loadHacData();
-        if (pageId === 'settings') initSettings(); 
+        
+        if (page === 'canvas') loadCanvasData();
+        if (page === 'hac') loadHacData();
+        if (page === 'playlist') renderPlaylist(); // Triggers your music queue
+        if (page === 'settings') initSettings(); 
 
     } catch (error) {
         console.error("Error loading page:", error);
         contentArea.innerHTML = `
             <div style="text-align: center; margin-top: 50px;">
                 <h2><i class="fa-solid fa-triangle-exclamation" style="color: var(--warning);"></i> Module Not Found</h2>
-                <p>Ensure you have a <b>pages/${pageId}.html</b> file created.</p>
+                <p>Ensure you have a <b>pages/${page}.html</b> file created.</p>
             </div>`;
     }
 }
@@ -333,38 +349,76 @@ async function addYoutubeTrack() {
     const url = input.value.trim();
 
     if (!url) return;
-    status.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Processing YouTube link...';
+    console.log("Analyzing YouTube URL...");
+    status.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Fetching audio stream...';
 
-    // Extract Video ID
     const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
     const match = url.match(regExp);
     const videoId = (match && match[2].length == 11) ? match[2] : null;
 
-    if (videoId) {
-        playlistTracks.push({
-            name: "YouTube: " + videoId,
-            url: `https://api.vevioz.com/api/button/mp3/${videoId}`,
-            type: 'youtube'
-        });
-        input.value = "";
-        status.style.color = "var(--success)";
-        status.innerText = "Added to queue!";
-        renderPlaylist();
-    } else {
+    if (!videoId) {
+        console.error("Invalid YouTube URL provided.");
+        status.innerText = "Invalid URL.";
+        return;
+    }
+
+    try {
+        // We are using a 3rd party converter that returns a direct link
+        // This is a "best-effort" API. If it fails, check the green console.
+        const apiUrl = `https://api.v2.vevioz.com/@api/json/mp3/${videoId}`;
+        
+        console.log(`Requesting stream for ID: ${videoId}...`);
+        const response = await fetch(apiUrl);
+        const data = await response.json();
+
+        if (data && data.link) {
+            playlistTracks.push({
+                name: data.title || "YouTube Track",
+                url: data.link,
+                type: 'youtube'
+            });
+            console.log("Success! Track added to queue.");
+            status.style.color = "var(--success)";
+            status.innerText = "Track added!";
+            input.value = "";
+            renderPlaylist();
+        } else {
+            throw new Error("API did not return a streamable link.");
+        }
+    } catch (e) {
+        console.error("YT Conversion Error: " + e.message);
         status.style.color = "var(--warning)";
-        status.innerText = "Invalid YouTube URL.";
+        status.innerText = "Link failed. Try another video.";
     }
 }
 
 function playTrack(index) {
+    if (index < 0 || index >= playlistTracks.length) return;
+    
     currentTrackIndex = index;
     const player = document.getElementById('main-audio-player');
     const track = playlistTracks[index];
 
-    player.src = track.url;
-    player.play();
+    console.log(`Attempting to play: ${track.name}`);
 
-    // Update the UI if we are on the playlist page
+    // ERROR MONITORING
+    player.onerror = () => {
+        console.error(`Playback Failed: ${track.name}. The link might have expired or been blocked.`);
+        // Optional: Skip to next track automatically on error
+        // setTimeout(() => playTrack((currentTrackIndex + 1) % playlistTracks.length), 2000);
+    };
+
+    player.oncanplay = () => {
+        console.log(`Stream Buffer Ready for: ${track.name}`);
+    };
+
+    player.src = track.url;
+    
+    // Some browsers require a fresh play() call after src change
+    player.play().catch(err => {
+        console.error("Autoplay blocked or link invalid: " + err.message);
+    });
+
     updateControlUI(true, track.name);
     renderPlaylist();
 
@@ -423,4 +477,9 @@ function renderPlaylist() {
         div.onclick = () => isPlaying ? togglePlay() : playTrack(index);
         container.appendChild(div);
     });
+}
+
+function toggleConsole() {
+    const DC = document.getElementById("debug-console");
+    DC.style.display = DC.style.display === "none" ? "block" : "none";
 }
