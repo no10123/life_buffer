@@ -1,0 +1,85 @@
+:root {
+    --bg-color: #f4f7f6;
+    --surface-color: #ffffff;
+    --primary-color: #2c3e50;
+    --accent-color: #3498db;
+    --text-color: #333333;
+    --border-color: #e0e0e0;
+}
+
+body {
+    margin: 0;
+    font-family: 'Lato', sans-serif;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Header / Nav (Injected into Workspace) */
+.atlas-header {
+    background: var(--surface-color);
+    padding: 1rem 2rem;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.atlas-brand {
+    font-family: 'Crimson Pro', serif;
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--primary-color);
+}
+
+.nav-links button {
+    background: none;
+    border: none;
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+    font-family: 'Lato', sans-serif;
+    font-weight: 700;
+    color: var(--text-color);
+}
+
+.nav-links button:hover, .nav-links button.active {
+    color: var(--accent-color);
+}
+
+/* Main Content Area */
+#main-viewport {
+    padding: 2rem;
+    flex-grow: 1;
+    overflow-y: auto;
+}
+
+/* Editor Specifics */
+.editor-container {
+    background: var(--surface-color);
+    padding: 2rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    min-height: 60vh;
+    font-family: 'Crimson Pro', serif;
+    font-size: 1.1rem;
+    line-height: 1.6;
+}
+
+textarea.raw-editor {
+    width: 100%;
+    height: 100%;
+    border: none;
+    resize: none;
+    outline: none;
+    font-family: 'Roboto Mono', monospace;
+}
+
+/* Map & Dice Placeholders */
+.module-card {
+    background: var(--surface-color);
+    padding: 2rem;
+    border-radius: 8px;
+    text-align: center;
+}

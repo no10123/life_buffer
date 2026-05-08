@@ -516,7 +516,7 @@ function initZipper() {
 async function initSidebar() {
     const sidebarNav = document.getElementById('sidebar-nav'); // Ensure your <ul> has this ID
     try {
-        const response = await fetch('apps.json');
+        const response = await fetch(`${HAC_PROXY_URL}/api/pages`);
         const apps = await response.json();
 
         sidebarNav.innerHTML = apps.map(app => `
