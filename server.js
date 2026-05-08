@@ -23,6 +23,7 @@ const HAC_BASE = 'https://accesscenter.roundrockisd.org/HomeAccess';
 
 app.use(cors());           // Allow your UniDash origin
 app.use(express.json());
+app.use(express.static(__dirname));
 
 // ------------------------------------------------------------------
 // In-memory sessions:  sessionId → { jar, baseUrl }

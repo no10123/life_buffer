@@ -35,41 +35,66 @@ function applySavedSettings() {
 // ==========================================
 // 2. DYNAMIC PAGE ROUTING (SPA LOGIC)
 // ==========================================
-async function loadPage(pageName) {
+async function loadPage(pageName, btn) {
     const contentArea = document.getElementById('main-content-area');
-    
+    if (!contentArea) {
+        console.error("CRITICAL: #main-content-area not found.");
+        return;
+    }
+
+    // --- Update sidebar active state ---
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+
     try {
+        // Cache-bust so Chromebook never serves a stale page
         const response = await fetch(`pages/${pageName}.html?v=${Date.now()}`);
-        if (!response.ok) throw new Error("Page not found");
-        
-        const html = await response.json(); // If using a JSON api, otherwise use .text()
-        const text = await response.text();
+        if (!response.ok) throw new Error(`${response.status} — pages/${pageName}.html not found`);
 
-        // 1. Inject the HTML
-        contentArea.innerHTML = text;
+        // .text() only — never call both .json() and .text() on the same response
+        const html = await response.text();
+        contentArea.innerHTML = html;
 
-        // 2. Extract and run Scripts
-        const scripts = contentArea.querySelectorAll("script");
-        scripts.forEach(oldScript => {
-            const newScript = document.createElement("script");
-            
-            // Copy attributes (src, type, etc.)
-            Array.from(oldScript.attributes).forEach(attr => {
-                newScript.setAttribute(attr.name, attr.value);
-            });
-
-            // Copy inline code
-            newScript.appendChild(document.createTextNode(oldScript.innerHTML));
-            
-            // Remove the "dead" script and add the "live" one
-            oldScript.parentNode.removeChild(oldScript);
-            document.body.appendChild(newScript);
+        // Re-execute any <script> tags injected with the page HTML
+        // (innerHTML doesn't run scripts automatically)
+        contentArea.querySelectorAll('script').forEach(oldScript => {
+            const newScript = document.createElement('script');
+            Array.from(oldScript.attributes).forEach(attr =>
+                newScript.setAttribute(attr.name, attr.value)
+            );
+            newScript.textContent = oldScript.textContent;
+            oldScript.replaceWith(newScript);
         });
 
-        console.log(`Successfully initialized page: ${pageName}`);
-        
+        // Fade-in animation
+        contentArea.classList.remove('animate-fade-in');
+        void contentArea.offsetWidth; // force reflow
+        contentArea.classList.add('animate-fade-in');
+
+        // --- Page-specific init hooks ---
+        const hooks = {
+            gmail:    () => { if (accessToken) fetchEmails(); },
+            canvas:   loadCanvasData,
+            hac:      loadHacData,
+            playlist: renderPlaylist,
+            settings: initSettings,
+            zipper:   initZipper,
+        };
+        hooks[pageName]?.();
+
+        console.log(`Loaded: pages/${pageName}.html`);
+
     } catch (err) {
-        contentArea.innerHTML = `<div class="card"><h1>404</h1><p>Page not found.</p></div>`;
+        console.error('loadPage error: ' + err.message);
+        contentArea.innerHTML = `
+            <div style="text-align:center; margin-top:60px;">
+                <i class="fa-solid fa-triangle-exclamation" style="font-size:48px; color:var(--warning);"></i>
+                <h2 style="margin-top:16px;">Module Not Found</h2>
+                <p style="color:var(--text-muted); margin-top:8px;">
+                    Make sure <strong>pages/${pageName}.html</strong> exists.
+                </p>
+                <p style="color:#ef4444; font-size:12px; margin-top:8px;">${err.message}</p>
+            </div>`;
     }
 }
 
@@ -511,21 +536,4 @@ function initZipper() {
             dlBtn.disabled = false;
         }
     };
-}
-
-async function initSidebar() {
-    const sidebarNav = document.getElementById('sidebar-nav'); // Ensure your <ul> has this ID
-    try {
-        const response = await fetch(`${HAC_PROXY_URL}/api/pages`);
-        const apps = await response.json();
-
-        sidebarNav.innerHTML = apps.map(app => `
-            <li class="nav-item" onclick="loadPage('${app.id}')">
-                <i class="fa-solid ${app.icon}"></i>
-                <span>${app.name}</span>
-            </li>
-        `).join('');
-    } catch (err) {
-        console.error("Failed to load dynamic menu:", err);
-    }
 }

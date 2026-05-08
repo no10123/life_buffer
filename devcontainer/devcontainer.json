@@ -1,0 +1,13 @@
+{
+  "name": "UniDash",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:18",
+  "forwardPorts": [3000],
+  "portsAttributes": {
+    "3000": {
+      "label": "UniDash App",
+      "onAutoForward": "openBrowser",
+      "visibility": "public"
+    }
+  },
+  "postStartCommand": "npm install && node server.js"
+}
