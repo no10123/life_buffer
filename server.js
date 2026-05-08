@@ -236,6 +236,29 @@ function computePct(score, max) {
     return Math.round((s / m) * 1000) / 10; // one decimal
 }
 
+const fs = require('fs');
+const path = require('path');
+
+app.get('/api/pages', (req, res) => {
+    const pagesDir = path.join(__dirname, 'pages');
+    fs.readdir(pagesDir, (err, files) => {
+        if (err) return res.status(500).json({ error: "Cannot scan directory" });
+        
+        // Filter for .html files and format the names
+        const pages = files
+            .filter(file => file.endsWith('.html'))
+            .map(file => {
+                const id = file.replace('.html', '');
+                return {
+                    id: id,
+                    name: id.charAt(0).toUpperCase() + id.slice(1), // Capitalize
+                    icon: "fa-rocket" // Default icon
+                };
+            });
+        res.json(pages);
+    });
+});
+
 // ------------------------------------------------------------------
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`✓ HAC Proxy listening on port ${PORT}`));

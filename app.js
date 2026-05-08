@@ -35,57 +35,41 @@ function applySavedSettings() {
 // ==========================================
 // 2. DYNAMIC PAGE ROUTING (SPA LOGIC)
 // ==========================================
-async function loadPage(page, btn) {
-    // 1. Use your original ID so we don't break the HTML connection
-    const contentArea = document.getElementById('main-content-area'); 
-    if (!contentArea) {
-        console.error("CRITICAL: Element 'main-content-area' not found in index.html");
-        return;
-    }
-
-    // 2. Update Sidebar Active States (from old version)
-    const navButtons = document.querySelectorAll('.nav-btn');
-    navButtons.forEach(b => b.classList.remove('active'));
-    if (btn) btn.classList.add('active');
-
+async function loadPage(pageName) {
+    const contentArea = document.getElementById('main-content-area');
+    
     try {
-        // 3. Fetch with Cache Buster (?v=...) to force browser to see your changes
-        const response = await fetch(`pages/${page}.html?v=${Date.now()}`);
+        const response = await fetch(`pages/${pageName}.html?v=${Date.now()}`);
         if (!response.ok) throw new Error("Page not found");
         
-        const html = await response.text();
+        const html = await response.json(); // If using a JSON api, otherwise use .text()
+        const text = await response.text();
+
+        // 1. Inject the HTML
+        contentArea.innerHTML = text;
+
+        // 2. Extract and run Scripts
+        const scripts = contentArea.querySelectorAll("script");
+        scripts.forEach(oldScript => {
+            const newScript = document.createElement("script");
+            
+            // Copy attributes (src, type, etc.)
+            Array.from(oldScript.attributes).forEach(attr => {
+                newScript.setAttribute(attr.name, attr.value);
+            });
+
+            // Copy inline code
+            newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+            
+            // Remove the "dead" script and add the "live" one
+            oldScript.parentNode.removeChild(oldScript);
+            document.body.appendChild(newScript);
+        });
+
+        console.log(`Successfully initialized page: ${pageName}`);
         
-        // 4. Inject HTML
-        contentArea.innerHTML = html;
-
-        // 5. Keep your Animation logic (from old version)
-        contentArea.classList.remove('animate-fade-in');
-        void contentArea.offsetWidth; // Force reflow
-        contentArea.classList.add('animate-fade-in');
-
-        // 6. Log to your new Green Debug Console
-        console.log(`Successfully loaded: ${page}.html`);
-
-        // 7. Page-Specific Logic (Combined)
-        if (page === 'gmail') {
-            // Check if login button exists before trying to hide it
-            const authBtn = document.getElementById('auth-gmail-btn');
-            if (authBtn && accessToken) authBtn.style.display = 'none';
-            if (accessToken) fetchEmails();
-        }
-        
-        if (page === 'canvas') loadCanvasData();
-        if (page === 'hac') loadHacData();
-        if (page === 'playlist') renderPlaylist(); // Triggers your music queue
-        if (page === 'settings') initSettings(); 
-
-    } catch (error) {
-        console.error("Error loading page:", error);
-        contentArea.innerHTML = `
-            <div style="text-align: center; margin-top: 50px;">
-                <h2><i class="fa-solid fa-triangle-exclamation" style="color: var(--warning);"></i> Module Not Found</h2>
-                <p>Ensure you have a <b>pages/${page}.html</b> file created.</p>
-            </div>`;
+    } catch (err) {
+        contentArea.innerHTML = `<div class="card"><h1>404</h1><p>Page not found.</p></div>`;
     }
 }
 
@@ -469,4 +453,79 @@ function renderPlaylist() {
 function toggleConsole() {
     const DC = document.getElementById("debug-console");
     DC.style.display = DC.style.display === "none" ? "block" : "none";
+}
+
+function initZipper() {
+    const folderInput = document.getElementById('folder-input');
+    const dropArea = document.getElementById('drop-area');
+    const dlBtn = document.getElementById('dl-btn');
+    const status = document.getElementById('status');
+    
+    if (!folderInput || !dropArea) return;
+
+    let currentZip = new JSZip();
+
+    dropArea.onclick = () => folderInput.click();
+
+    folderInput.onchange = (e) => {
+        const files = e.target.files;
+        if (files.length === 0) return;
+
+        currentZip = new JSZip();
+        let count = 0;
+
+        for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+            const fullPath = file.webkitRelativePath;
+            const pathParts = fullPath.split('/');
+            pathParts.shift(); 
+            const internalPath = pathParts.join('/');
+
+            if (internalPath) {
+                currentZip.file(internalPath, file);
+                count++;
+            }
+        }
+
+        status.innerText = `Prepared ${count} items.`;
+        dlBtn.disabled = false;
+    };
+
+    dlBtn.onclick = async () => {
+        status.innerText = "Zipping... please wait.";
+        dlBtn.disabled = true;
+
+        try {
+            const blob = await currentZip.generateAsync({type: "blob"});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = "bundle.zip";
+            a.click();
+            URL.revokeObjectURL(url);
+            status.innerText = "Download complete!";
+        } catch (err) {
+            status.innerText = "Error: " + err.message;
+            console.error(err);
+        } finally {
+            dlBtn.disabled = false;
+        }
+    };
+}
+
+async function initSidebar() {
+    const sidebarNav = document.getElementById('sidebar-nav'); // Ensure your <ul> has this ID
+    try {
+        const response = await fetch('apps.json');
+        const apps = await response.json();
+
+        sidebarNav.innerHTML = apps.map(app => `
+            <li class="nav-item" onclick="loadPage('${app.id}')">
+                <i class="fa-solid ${app.icon}"></i>
+                <span>${app.name}</span>
+            </li>
+        `).join('');
+    } catch (err) {
+        console.error("Failed to load dynamic menu:", err);
+    }
 }
