@@ -17,11 +17,12 @@
                 <h2>UniDash</h2>
             </div>
             <ul>
-                <li><button class="nav-btn" onclick="loadPage('overview', this)"><i class="fa-solid fa-house"></i> Overview</button></li>
+                <li><button class="nav-btn active" onclick="loadPage('overview', this)"><i class="fa-solid fa-house"></i> Overview</button></li>
                 <li><button class="nav-btn" onclick="loadPage('canvas', this)"><i class="fa-solid fa-book"></i> Canvas</button></li>
                 <li><button class="nav-btn" onclick="loadPage('hac', this)"><i class="fa-solid fa-chart-simple"></i> HAC Grades</button></li>
                 <li><button class="nav-btn" onclick="loadPage('gmail', this)"><i class="fa-solid fa-envelope"></i> Gmail</button></li>
                 <li><button class="nav-btn" onclick="loadPage('browser', this)"><i class="fa-solid fa-globe"></i> App Browser</button></li>
+                <li><button class="nav-btn" onclick="loadPage('zipper', this)"><i class="fa-solid fa-globe"></i> Zipper</button></li>
                 <li><button class="nav-btn" onclick="loadPage('playlist', this)"><i class="fa-solid fa-music"></i> Playlist</button></li>
                 <li><button class="nav-btn" onclick="loadPage('settings', this)"><i class="fa-solid fa-gear"></i> Settings</button></li>
             </ul>
@@ -44,8 +45,8 @@
         </main>
     </div>
 
-    <script src="hac.js"></script>
     <script src="app.js"></script>
+    <script src="hac.js"></script>  
     <script>
         // Automatically load the Overview page when the shell loads
         window.addEventListener('DOMContentLoaded', () => {
@@ -92,7 +93,6 @@
         
         console.log("Debugger Initialized");
     </script>
-    <script async defer src="https://apis.google.com/js/api.js" onload="gapiLoaded()"></script>
-    <script async defer src="https://accounts.google.com/gsi/client" onload="gisLoaded()"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 </body>
 </html>

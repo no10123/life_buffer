@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<!--cleint secret: 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-->
+<!--Client ID: 218198682167-8u3rjqchskh0q1f5nnbahs43hddaa51h.apps.googleusercontent.com-->
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Atlas Medical Note Taker V3.5 (Adv Dice)</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,400;0,600;1,400&family=Lato:wght@400;700&family=Roboto+Mono&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="stylesheet" href="AS.css">
+
+    <script>
+    window.MathJax = {
+      tex: { inlineMath: [['$', '$'], ['\\(', '\\)']] },
+      svg: { fontCache: 'global' },
+      startup: { typeset: false }
+    };
+    </script>
+    <script type="text/javascript" id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+</head>
+<body>
+
+    <div id="screen-modules" class="screen active">
+        <h1 style="font-family: var(--font-doc); font-size: 3rem; color: var(--accent);">Atlas V3.5</h1>
+        <p style="color: var(--text-muted); margin-bottom: 30px;">Medical Note Taker & Advanced Dice</p>
+        <div style="display:flex; gap:10px; margin-bottom: 20px;">
+            <input type="text" id="new-module-name" placeholder="New Atlas Name..." style="width: 250px;">
+            <button class="primary" onclick="createModule()">Create</button>
+        </div>
+        <div class="module-list" id="module-list-container"></div>
+    </div>
+
+    <div id="screen-workspace" class="screen">
+        
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <button onclick="saveAndExit()"><span class="material-icons">arrow_back</span></button>
+                <span id="current-module-title" style="font-weight:bold;">Atlas</span>
+                <button class="primary" onclick="createNote()"><span class="material-icons">add</span></button>
+            </div>
+            <div class="notes-list" id="sidebar-notes"></div>
+        </div>
+
+        <div class="viewport-container">
+
+            <div class="view-switcher" id="view-tabs">
+                <div class="view-tab active" onclick="switchMainView('map')">MAP</div>
+                <div class="view-tab" onclick="switchMainView('dice')">DICE</div>
+            </div>
+
+            <div id="view-map" class="main-view active">
+                <div class="map-toolbar">
+                    <button class="icon-btn" onclick="clearWhiteboard()"><span class="material-icons">delete_outline</span></button>
+                    <button class="icon-btn" onclick="undo()"><span class="material-icons">undo</span></button>
+                    <div class="divider"></div>
+                    <button id="btn-draw-mode" class="icon-btn" onclick="toggleDrawMode()"><span class="material-icons">edit</span></button>
+                    
+                    <div id="draw-tools" class="draw-options hidden">
+                        <div class="color-well"><input type="color" id="brush-color" value="#80cbc4" onchange="updateBrush()"></div>
+                        <select id="brush-type" onchange="updateBrush()" style="height:30px; width:100px;">
+                            <option value="pen">Pen</option>
+                            <option value="marker">Marker</option>
+                            <option value="spray">Spray</option>
+                            <option value="fill">Fill</option>
+                            <option value="rect">Box</option>
+                            <option value="circle">Circle</option>
+                            <option value="text">Text</option>
+                            <option value="eraser">Eraser</option>
+                        </select>
+                        <input type="range" id="brush-size" min="1" max="50" value="3" onchange="updateBrush()" style="width: 60px;">
+                    </div>
+                </div>
+
+                <canvas id="layer-whiteboard"></canvas>
+                <input type="text" id="map-text-input" placeholder="Type & Enter...">
+                <svg id="layer-connections" style="position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none;"></svg>
+                <div id="layer-nodes" style="position:absolute; top:0; left:0; width:100%; height:100%;"></div>
+            </div>
+
+            <div id="view-dice" class="main-view">
+                <div class="dice-container">
+                    <div class="dice-controls">
+                        <div style="color:var(--text-muted); font-size:0.8em; text-transform:uppercase; letter-spacing:1px; margin-bottom:5px;">Global Mode</div>
+                        <div class="adv-toggles">
+                            <button class="adv-btn" data-mode="dis" onclick="setGlobalMode('dis')">DIS</button>
+                            <button class="adv-btn active" data-mode="norm" onclick="setGlobalMode('norm')">NORM</button>
+                            <button class="adv-btn" data-mode="adv" onclick="setGlobalMode('adv')">ADV</button>
+                        </div>
+
+                        <div style="color:var(--text-muted); font-size:0.8em; text-transform:uppercase; letter-spacing:1px; margin-bottom:5px; margin-top:10px;">Add Dice</div>
+                        <button class="dice-btn" onclick="addDie(4)">d4 <span>▲</span></button>
+                        <button class="dice-btn" onclick="addDie(6)">d6 <span>■</span></button>
+                        <button class="dice-btn" onclick="addDie(8)">d8 <span>◆</span></button>
+                        <button class="dice-btn" onclick="addDie(10)">d10 <span>⬖</span></button>
+                        <button class="dice-btn" onclick="addDie(12)">d12 <span>⬢</span></button>
+                        <button class="dice-btn" onclick="addDie(20)">d20 <span>⬡</span></button>
+                        <button class="dice-btn" onclick="addDie(100)">d100 <span>●</span></button>
+                        <button class="dice-btn" onclick="addCustomDie()">d? <span>?</span></button>
+                        
+                        <div style="margin-top:auto;"></div>
+                        <button class="dice-btn" style="border-color:var(--danger); color:var(--danger);" onclick="clearTray()">Clear Tray</button>
+                    </div>
+
+                    <div class="dice-tray-area">
+                        <div class="dice-tray" id="dice-tray-content">
+                            <div style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; color:#444; font-style:italic;">
+                                Add dice... Click die to toggle Adv/Dis independently.
+                            </div>
+                        </div>
+
+                        <div class="dice-footer">
+                            <div style="display:flex; flex-direction:column;">
+                                <label style="font-size:0.8em; color:var(--text-muted);">Modifier</label>
+                                <input type="number" id="dice-modifier" value="0" onchange="calculateAverage()" style="width:80px; text-align:center; font-weight:bold;">
+                            </div>
+                            
+                            <button class="primary" onclick="rollAllDice()" style="padding:15px 40px; font-size:1.2rem;">ROLL</button>
+
+                            <div class="total-display">
+                                <span style="font-size:0.5em; color:var(--text-muted);">TOTAL</span>
+                                <span id="dice-total-display">0</span>
+                                <span id="dice-avg-display" class="avg-display">Avg: 0</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="view-editor">
+                <div class="editor-toolbar">
+                    <button onclick="closeEditor()" title="Close Note"><span class="material-icons">keyboard_arrow_down</span> Minimize</button>
+                    <div class="divider"></div>
+                    <span style="font-size:0.8em; color:#888; margin-right:5px;">Node:</span>
+                    <div class="color-picker" id="node-color-picker"></div>
+                    <div class="divider"></div>
+                    <button class="icon-btn" onclick="formatDoc('bold')"><span class="material-icons">format_bold</span></button>
+                    <button class="icon-btn" onclick="formatDoc('italic')"><span class="material-icons">format_italic</span></button>
+                    <div class="divider"></div>
+                    <select onchange="formatDoc('fontName', this.value)" style="width:100px;">
+                        <option value="Crimson Pro">Medical</option>
+                        <option value="Lato">Modern</option>
+                        <option value="Roboto Mono">Code</option>
+                    </select>
+                    
+                    <div class="editor-stats">
+                        <div class="stat-item" title="Words Per Minute (Session)">
+                            <span class="stat-val" id="stat-wpm">0</span>
+                            <span class="stat-label">WPM</span>
+                        </div>
+                        <div class="divider"></div>
+                        <div class="stat-item" title="Total Words">
+                            <span class="stat-val" id="stat-words">0</span>
+                            <span class="stat-label">Words</span>
+                        </div>
+                        <div class="divider"></div>
+                        <div class="stat-item" title="Est. Reading Time">
+                            <span class="stat-val" id="stat-read">0m</span>
+                            <span class="stat-label">Read</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="editor-workspace">
+                    <div class="paper">
+                        <input type="text" id="doc-title" placeholder="Note Title" oninput="saveCurrentDocHeader()">
+                        <input type="text" id="doc-desc" placeholder="Short description..." oninput="saveCurrentDocHeader()">
+                        <div id="editor-content" contenteditable="true" spellcheck="false"></div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+<script>
+    // --- STATE ---
+    let app = { modules: [] };
+    let currentModId = null;
+    let currentNoteId = null;
+    let drawMode = false;
+    let isPreviewMode = false;
+
+    // --- TYPING STATS STATE ---
+    let sessionStartTime = 0;
+    let sessionStartWords = 0;
+
+    // --- DRAWING STATE ---
+    let painting = false;
+    let canvasHistory = [];
+    let historyStep = -1;
+    let snapshot = null; 
+
+    // --- DICE STATE ---
+    let dicePool = []; // { id, sides, value, state: 'norm'|'adv'|'dis' }
+    let isRolling = false;
+    let globalDiceMode = 'norm';
+
+    const COLORS = ['#ffb7b2', '#ffdac1', '#e2f0cb', '#b5ead7', '#c7ceea', '#e1bee7'];
+
+    window.onload = () => {
+        const stored = localStorage.getItem('atlas_v3');
+        if(stored) app = JSON.parse(stored);
+        renderModuleList();
+        
+        const editor = document.getElementById('editor-content');
+        
+        editor.addEventListener('focus', () => {
+            const note = getMod().notes.find(n => n.id === currentNoteId);
+            sessionStartTime = Date.now();
+            sessionStartWords = countWords(editor.innerText);
+            if(isPreviewMode && note) {
+                editor.innerHTML = note.html;
+                isPreviewMode = false;
+            }
+        });
+
+        editor.addEventListener('input', () => {
+             const note = getMod().notes.find(n => n.id === currentNoteId);
+             if(!isPreviewMode) note.html = editor.innerHTML;
+             updateStats();
+        });
+
+        editor.addEventListener('blur', () => {
+            saveCurrentDocBody();
+            renderLatexAndLinks();
+        });
+
+        document.getElementById('map-text-input').addEventListener('keydown', (e) => {
+            if(e.key === 'Enter') commitTextToCanvas();
+        });
+        document.getElementById('map-text-input').addEventListener('blur', commitTextToCanvas);
+    };
+
+    function saveApp() { localStorage.setItem('atlas_v3', JSON.stringify(app)); }
+
+    // --- VIEW SWITCHING ---
+    function switchMainView(viewName) {
+        document.getElementById('view-map').classList.remove('active');
+        document.getElementById('view-dice').classList.remove('active');
+        document.querySelectorAll('.view-tab').forEach(t => t.classList.remove('active'));
+        
+        if(viewName === 'map') {
+            document.getElementById('view-map').classList.add('active');
+            document.querySelectorAll('.view-tab')[0].classList.add('active');
+            setTimeout(initCanvas, 10); 
+        } else {
+            document.getElementById('view-dice').classList.add('active');
+            document.querySelectorAll('.view-tab')[1].classList.add('active');
+        }
+    }
+
+    // --- DICE LOGIC ---
+    function addDie(sides) {
+        if(isRolling) return;
+        dicePool.push({ id: Date.now() + Math.random(), sides: sides, value: sides, state: globalDiceMode });
+        renderTray();
+        calculateAverage();
+    }
+
+    function addCustomDie() {
+        const input = prompt("Enter number of sides (1-999):");
+        const sides = parseInt(input);
+        if(sides && sides > 0) addDie(sides);
+    }
+
+    function removeDie(id, e) {
+        if(isRolling) return;
+        if(e) e.stopPropagation(); // prevent triggering toggle
+        dicePool = dicePool.filter(d => d.id !== id);
+        renderTray();
+        calculateAverage();
+    }
+
+    function toggleDieState(id) {
+        if(isRolling) return;
+        const die = dicePool.find(d => d.id === id);
+        if(!die) return;
+
+        // Cycle: Norm -> Adv -> Dis -> Norm
+        if(die.state === 'norm') die.state = 'adv';
+        else if(die.state === 'adv') die.state = 'dis';
+        else die.state = 'norm';
+        
+        renderTray();
+        calculateAverage();
+    }
+
+    function setGlobalMode(mode) {
+        globalDiceMode = mode;
+        document.querySelectorAll('.adv-btn').forEach(b => b.classList.remove('active'));
+        document.querySelector(`.adv-btn[data-mode="${mode}"]`).classList.add('active');
+    }
+
+    function clearTray() {
+        if(isRolling) return;
+        dicePool = [];
+        renderTray();
+        document.getElementById('dice-total-display').innerText = "0";
+        calculateAverage();
+    }
+
+    function renderTray() {
+        const tray = document.getElementById('dice-tray-content');
+        if(dicePool.length === 0) {
+            tray.innerHTML = '<div style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; color:#444; font-style:italic;">Add dice... Click die to toggle Adv/Dis independently.</div>';
+            return;
+        }
+        tray.innerHTML = '';
+        dicePool.forEach(die => {
+            const el = document.createElement('div');
+            el.className = 'tray-die';
+            el.setAttribute('data-type', 'd' + die.sides);
+            el.setAttribute('data-state', die.state);
+            el.id = 'die-' + die.id;
+            el.innerText = die.value;
+            
+            // Left click toggles state, right click (context menu) removes
+            el.onclick = () => toggleDieState(die.id);
+            el.oncontextmenu = (e) => { e.preventDefault(); removeDie(die.id); return false; };
+            
+            tray.appendChild(el);
+        });
+    }
+
+    function calculateAverage() {
+        // Average of dN = (N+1)/2
+        // Average with Advantage (Keep High) approx: (N+1)/2 + (N^2-1)/(6N)
+        // Average with Disadvantage (Keep Low) approx: (N+1)/2 - (N^2-1)/(6N)
+        
+        let sum = 0;
+        dicePool.forEach(d => {
+            const n = d.sides;
+            const baseAvg = (n + 1) / 2;
+            const shift = (n * n - 1) / (6 * n); // Variance shift
+            
+            if(d.state === 'norm') sum += baseAvg;
+            else if(d.state === 'adv') sum += (baseAvg + shift);
+            else if(d.state === 'dis') sum += (baseAvg - shift);
+        });
+
+        const mod = parseInt(document.getElementById('dice-modifier').value) || 0;
+        const total = sum + mod;
+        document.getElementById('dice-avg-display').innerText = `Exp. Avg: ${total.toFixed(2)}`;
+    }
+
+    function rollAllDice() {
+        if(dicePool.length === 0 || isRolling) return;
+        isRolling = true;
+        
+        const modifier = parseInt(document.getElementById('dice-modifier').value) || 0;
+        
+        // Clear previous animations
+        dicePool.forEach(d => {
+            const el = document.getElementById('die-' + d.id);
+            if(el) el.classList.remove('crit-anim');
+        });
+
+        // Animation Loop
+        let ticks = 0;
+        const interval = setInterval(() => {
+            ticks++;
+            dicePool.forEach(die => {
+                const el = document.getElementById('die-' + die.id);
+                if(el) {
+                    const rand = Math.floor(Math.random() * die.sides) + 1;
+                    el.innerText = rand;
+                    el.classList.add('rolling');
+                }
+            });
+
+            if(ticks > 15) { 
+                clearInterval(interval);
+                finalizeRoll(modifier);
+            }
+        }, 80);
+    }
+
+    function finalizeRoll(modifier) {
+        let total = 0;
+        dicePool.forEach(die => {
+            const r1 = Math.floor(Math.random() * die.sides) + 1;
+            const r2 = Math.floor(Math.random() * die.sides) + 1;
+            
+            let finalVal = r1;
+            if(die.state === 'adv') finalVal = Math.max(r1, r2);
+            if(die.state === 'dis') finalVal = Math.min(r1, r2);
+
+            die.value = finalVal;
+            total += finalVal;
+            
+            const el = document.getElementById('die-' + die.id);
+            if(el) {
+                el.innerText = finalVal;
+                el.classList.remove('rolling');
+                // Critical Animation
+                if(finalVal === die.sides) {
+                    el.classList.add('crit-anim');
+                }
+            }
+        });
+        
+        const finalTotal = total + modifier;
+        document.getElementById('dice-total-display').innerText = `${total} (${modifier >= 0 ? '+' : ''}${modifier}) = ${finalTotal}`;
+        isRolling = false;
+    }
+
+    // --- STATS LOGIC ---
+    function countWords(str) { return str.trim().split(/\s+/).filter(w => w.length > 0).length; }
+
+    function updateStats() {
+        const text = document.getElementById('editor-content').innerText;
+        const currentWords = countWords(text);
+        document.getElementById('stat-words').innerText = currentWords;
+        const readTime = Math.ceil(currentWords / 200);
+        document.getElementById('stat-read').innerText = readTime + "m";
+        const timeElapsedMin = (Date.now() - sessionStartTime) / 60000;
+        if(timeElapsedMin > 0.05) { 
+            const wordsAdded = Math.max(0, currentWords - sessionStartWords);
+            const wpm = Math.round(wordsAdded / timeElapsedMin);
+            document.getElementById('stat-wpm').innerText = wpm > 0 ? wpm : 0;
+        }
+    }
+
+    // --- MODULES & NAV ---
+    function renderModuleList() {
+        const list = document.getElementById('module-list-container');
+        list.innerHTML = '';
+        app.modules.forEach(m => {
+            const div = document.createElement('div');
+            div.className = 'module-item';
+            div.innerHTML = `
+                <div style="flex-grow:1; cursor:pointer;" onclick="openModule('${m.id}')">
+                    <strong style="font-family:var(--font-doc); font-size:1.2em;">${m.name}</strong>
+                    <div style="font-size:0.8em; color:#888;">${m.notes.length} Notes</div>
+                </div>
+                <button class="icon-btn" style="color:var(--danger);" onclick="deleteModule('${m.id}')"><span class="material-icons">delete</span></button>
+            `;
+            list.appendChild(div);
+        });
+    }
+
+    function createModule() {
+        const name = document.getElementById('new-module-name').value;
+        if(!name) return;
+        app.modules.push({ id: Date.now().toString(), name: name, notes: [], wb: null });
+        saveApp();
+        renderModuleList();
+        document.getElementById('new-module-name').value = '';
+    }
+
+    function deleteModule(id) {
+        if(!confirm("Delete?")) return;
+        app.modules = app.modules.filter(m => m.id !== id);
+        saveApp();
+        renderModuleList();
+    }
+
+    function openModule(id) {
+        currentModId = id;
+        document.getElementById('screen-modules').classList.remove('active');
+        document.getElementById('screen-workspace').classList.add('active');
+        document.getElementById('current-module-title').innerText = getMod().name;
+        initCanvas();
+        renderSidebar();
+        renderMap();
+        switchMainView('map');
+    }
+
+    function saveAndExit() {
+        if(document.getElementById('view-map').classList.contains('active')) saveWhiteboard();
+        saveApp();
+        currentModId = null;
+        document.getElementById('screen-workspace').classList.remove('active');
+        document.getElementById('screen-modules').classList.add('active');
+    }
+
+    function getMod() { return app.modules.find(m => m.id === currentModId); }
+
+    // --- SIDEBAR ---
+    function renderSidebar() {
+        const list = document.getElementById('sidebar-notes');
+        list.innerHTML = '';
+        getMod().notes.sort((a,b) => a.num - b.num).forEach(n => {
+            const el = document.createElement('div');
+            el.className = `sidebar-note-item ${currentNoteId === n.id ? 'active' : ''}`;
+            el.style.borderLeftColor = n.color;
+            el.onclick = () => openNoteInEditor(n.id);
+            el.innerHTML = `<span class="sb-title">#${n.num} ${n.title}</span><span class="sb-desc">${n.desc || 'No description'}</span>`;
+            list.appendChild(el);
+        });
+    }
+
+    function createNote() {
+        const mod = getMod();
+        const max = mod.notes.reduce((acc, n) => Math.max(acc, n.num), 0);
+        const newNote = {
+            id: Date.now().toString(), num: max + 1, title: `Topic ${max + 1}`,
+            desc: '', html: '', x: 100 + Math.random()*100, y: 100 + Math.random()*100,
+            color: COLORS[Math.floor(Math.random() * COLORS.length)]
+        };
+        mod.notes.push(newNote);
+        saveApp();
+        renderSidebar();
+        renderMap();
+    }
+
+    // --- EDITOR ---
+    function openNoteInEditor(id) {
+        currentNoteId = id;
+        const note = getMod().notes.find(n => n.id === id);
+        document.getElementById('view-editor').classList.add('active');
+        document.getElementById('doc-title').value = note.title;
+        document.getElementById('doc-desc').value = note.desc;
+        renderColorPicker();
+        renderSidebar();
+        document.getElementById('editor-content').innerHTML = note.html || 'Start typing...';
+        renderLatexAndLinks();
+        updateStats(); 
+    }
+
+    function closeEditor() {
+        saveCurrentDocBody();
+        currentNoteId = null;
+        document.getElementById('view-editor').classList.remove('active');
+        renderSidebar();
+        if(document.getElementById('view-map').classList.contains('active')) renderMap();
+    }
+
+    function renderColorPicker() {
+        const container = document.getElementById('node-color-picker');
+        container.innerHTML = '';
+        const note = getMod().notes.find(n => n.id === currentNoteId);
+        COLORS.forEach(color => {
+            const div = document.createElement('div');
+            div.className = `color-option ${note.color === color ? 'active' : ''}`;
+            div.style.backgroundColor = color;
+            div.onclick = () => {
+                note.color = color;
+                saveApp();
+                renderColorPicker();
+                renderSidebar();
+            };
+            container.appendChild(div);
+        });
+    }
+
+    function saveCurrentDocHeader() {
+        if(!currentNoteId) return;
+        const note = getMod().notes.find(n => n.id === currentNoteId);
+        note.title = document.getElementById('doc-title').value;
+        note.desc = document.getElementById('doc-desc').value;
+        saveApp();
+    }
+
+    function saveCurrentDocBody() {
+        if(!currentNoteId || isPreviewMode) return; 
+        const note = getMod().notes.find(n => n.id === currentNoteId);
+        note.html = document.getElementById('editor-content').innerHTML;
+        saveApp();
+    }
+
+    function formatDoc(cmd, value=null) {
+        document.execCommand(cmd, false, value);
+        document.getElementById('editor-content').focus();
+    }
+
+    function renderLatexAndLinks() {
+        const editor = document.getElementById('editor-content');
+        const note = getMod().notes.find(n => n.id === currentNoteId);
+        if(!note) return;
+        let content = note.html;
+        content = content.replace(/(?<!\$)\$(\d+)(?!\$)/g, (match, num) => {
+            const target = getMod().notes.find(n => n.num == num);
+            if(target) return `<span class="smart-link" onclick="jumpToNote('${target.id}')"> ${target.title} </span>`;
+            return match;
+        });
+        editor.innerHTML = content;
+        MathJax.typesetPromise([editor]);
+        isPreviewMode = true;
+    }
+
+    function jumpToNote(targetId) {
+        if(!isPreviewMode) saveCurrentDocBody();
+        openNoteInEditor(targetId);
+    }
+
+    // --- MAP ENGINE ---
+    function renderMap() {
+        const layer = document.getElementById('layer-nodes');
+        layer.innerHTML = '';
+        getMod().notes.forEach(n => {
+            const el = document.createElement('div');
+            el.className = 'map-node';
+            el.style.left = n.x + 'px';
+            el.style.top = n.y + 'px';
+            el.style.backgroundColor = n.color;
+            el.innerText = n.num;
+            el.title = n.title;
+            el.onmousedown = (e) => startDrag(e, n.id);
+            layer.appendChild(el);
+        });
+
+        const svg = document.getElementById('layer-connections');
+        svg.innerHTML = '';
+        const regex = /(?<!\$)\$(\d+)(?!\$)/g; 
+        getMod().notes.forEach(src => {
+            if(!src.html) return;
+            const matches = [...src.html.matchAll(regex)];
+            matches.forEach(m => {
+                const targetNum = parseInt(m[1]);
+                const target = getMod().notes.find(n => n.num === targetNum);
+                if(target && target.id !== src.id) {
+                    const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+                    line.setAttribute('x1', src.x + 22);
+                    line.setAttribute('y1', src.y + 22);
+                    line.setAttribute('x2', target.x + 22);
+                    line.setAttribute('y2', target.y + 22);
+                    line.setAttribute('class', 'connection-line');
+                    svg.appendChild(line);
+                }
+            });
+        });
+    }
+
+    let dragId = null;
+    let dragOff = {x:0, y:0};
+    let didDrag = false;
+
+    function startDrag(e, id) {
+        if(drawMode) return;
+        e.stopPropagation();
+        dragId = id;
+        didDrag = false;
+        const n = getMod().notes.find(x => x.id === id);
+        dragOff = { x: e.clientX - n.x, y: e.clientY - n.y };
+        window.addEventListener('mousemove', onDrag);
+        window.addEventListener('mouseup', stopDrag);
+    }
+
+    function onDrag(e) {
+        if(!dragId) return;
+        didDrag = true;
+        const n = getMod().notes.find(x => x.id === dragId);
+        n.x = e.clientX - dragOff.x;
+        n.y = e.clientY - dragOff.y;
+        renderMap(); 
+    }
+
+    function stopDrag() {
+        if(dragId && !didDrag) openNoteInEditor(dragId);
+        if(dragId) saveApp();
+        dragId = null;
+        window.removeEventListener('mousemove', onDrag);
+        window.removeEventListener('mouseup', stopDrag);
+    }
+
+    // --- WHITEBOARD ---
+    let canvas, ctx, startX, startY;
+
+    function initCanvas() {
+        canvas = document.getElementById('layer-whiteboard');
+        ctx = canvas.getContext('2d', { willReadFrequently: true });
+        const parent = document.getElementById('view-map');
+        canvas.width = parent.clientWidth;
+        canvas.height = parent.clientHeight;
+        
+        ctx.clearRect(0,0, canvas.width, canvas.height);
+        const mod = getMod();
+        if(mod.wb) {
+            const img = new Image();
+            img.onload = () => { ctx.drawImage(img,0,0); saveState(); };
+            img.src = mod.wb;
+        } else {
+            saveState();
+        }
+        updateBrush(); 
+    }
+
+    function toggleDrawMode() {
+        drawMode = !drawMode;
+        const btn = document.getElementById('btn-draw-mode');
+        const tools = document.getElementById('draw-tools');
+        const nodes = document.getElementById('layer-nodes');
+        
+        if(drawMode) {
+            btn.classList.add('active');
+            tools.classList.remove('hidden');
+            canvas.style.pointerEvents = 'auto';
+            canvas.style.cursor = 'crosshair';
+            nodes.style.pointerEvents = 'none'; 
+        } else {
+            btn.classList.remove('active');
+            tools.classList.add('hidden');
+            canvas.style.pointerEvents = 'none';
+            nodes.style.pointerEvents = 'auto';
+            document.getElementById('map-text-input').style.display = 'none';
+            saveWhiteboard();
+        }
+    }
+
+    function updateBrush() {
+        const color = document.getElementById('brush-color').value;
+        const type = document.getElementById('brush-type').value;
+        const size = document.getElementById('brush-size').value;
+
+        ctx.lineWidth = size;
+        ctx.lineJoin = 'round';
+        ctx.lineCap = 'round';
+        ctx.globalCompositeOperation = 'source-over';
+
+        if(type === 'eraser') ctx.globalCompositeOperation = 'destination-out';
+        else if(type === 'marker') {
+            const r = parseInt(color.substr(1,2),16);
+            const g = parseInt(color.substr(3,2),16);
+            const b = parseInt(color.substr(5,2),16);
+            ctx.strokeStyle = `rgba(${r},${g},${b},0.4)`;
+            ctx.fillStyle = `rgba(${r},${g},${b},0.4)`;
+            ctx.lineWidth = size * 3;
+            ctx.lineCap = 'square';
+        } else {
+            ctx.strokeStyle = color;
+            ctx.fillStyle = color;
+        }
+    }
+
+    function saveState() {
+        historyStep++;
+        if (historyStep < canvasHistory.length) canvasHistory.length = historyStep;
+        canvasHistory.push(canvas.toDataURL());
+        if(canvasHistory.length > 10) { canvasHistory.shift(); historyStep--; }
+    }
+
+    function undo() {
+        if (historyStep > 0) {
+            historyStep--;
+            const img = new Image();
+            img.src = canvasHistory[historyStep];
+            img.onload = () => { ctx.clearRect(0,0,canvas.width,canvas.height); ctx.drawImage(img, 0, 0); };
+        }
+    }
+
+    function saveWhiteboard() {
+        if(currentModId) { getMod().wb = canvas.toDataURL(); saveApp(); }
+    }
+
+    function clearWhiteboard() {
+        if(confirm("Clear drawing?")) { ctx.clearRect(0,0,canvas.width,canvas.height); saveState(); saveWhiteboard(); }
+    }
+
+    function getCanvasCoords(e) {
+        const rect = canvas.getBoundingClientRect();
+        return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    }
+
+    window.addEventListener('mousedown', e => {
+        if(!drawMode || e.target !== canvas) return;
+        const coords = getCanvasCoords(e);
+        startX = coords.x;
+        startY = coords.y;
+        
+        const type = document.getElementById('brush-type').value;
+
+        if(type === 'text') {
+            commitTextToCanvas(); 
+            const input = document.getElementById('map-text-input');
+            input.style.display = 'block';
+            input.style.left = (e.clientX) + 'px';
+            input.style.top = (e.clientY) + 'px';
+            input.style.color = document.getElementById('brush-color').value;
+            input.value = '';
+            input.focus();
+            return;
+        }
+
+        if(type === 'fill') { floodFill(coords.x, coords.y, ctx.fillStyle); saveState(); return; }
+
+        painting = true;
+        snapshot = ctx.getImageData(0,0, canvas.width, canvas.height);
+
+        if(type === 'pen' || type === 'marker' || type === 'eraser') {
+            ctx.beginPath();
+            ctx.moveTo(coords.x, coords.y);
+        }
+    });
+    
+    window.addEventListener('mouseup', () => { if(painting){ painting=false; ctx.beginPath(); saveState(); } });
+    
+    window.addEventListener('mousemove', e => {
+        if(!painting || !drawMode) return;
+        const coords = getCanvasCoords(e);
+        const type = document.getElementById('brush-type').value;
+
+        if(type === 'pen' || type === 'marker' || type === 'eraser') {
+            ctx.lineTo(coords.x, coords.y);
+            ctx.stroke();
+        } else if(type === 'spray') {
+            const size = document.getElementById('brush-size').value * 2;
+            for(let i=0; i<10; i++) {
+                const offsetX = (Math.random() - 0.5) * size * 2;
+                const offsetY = (Math.random() - 0.5) * size * 2;
+                ctx.fillRect(coords.x + offsetX, coords.y + offsetY, 1, 1);
+            }
+        } else if(type === 'rect') {
+            ctx.putImageData(snapshot, 0, 0);
+            ctx.strokeRect(startX, startY, coords.x - startX, coords.y - startY);
+        } else if(type === 'circle') {
+            ctx.putImageData(snapshot, 0, 0);
+            ctx.beginPath();
+            const radius = Math.sqrt(Math.pow(coords.x - startX, 2) + Math.pow(coords.y - startY, 2));
+            ctx.arc(startX, startY, radius, 0, 2 * Math.PI);
+            ctx.stroke();
+        }
+    });
+
+    function commitTextToCanvas() {
+        const input = document.getElementById('map-text-input');
+        if(input.style.display === 'none' || !input.value) { input.style.display = 'none'; return; }
+        const rect = canvas.getBoundingClientRect();
+        const x = parseInt(input.style.left) - rect.left;
+        const y = parseInt(input.style.top) - rect.top + 18;
+        ctx.font = "20px 'Crimson Pro'";
+        ctx.fillStyle = input.style.color;
+        ctx.fillText(input.value, x, y);
+        input.value = '';
+        input.style.display = 'none';
+        updateBrush();
+        saveState();
+    }
+
+    function floodFill(startX, startY, fillColorStr) {
+        const d = document.createElement("div"); d.style.color = fillColorStr; document.body.appendChild(d);
+        const col = window.getComputedStyle(d).color.match(/\d+/g).map(Number);
+        document.body.removeChild(d);
+        const fillR=col[0], fillG=col[1], fillB=col[2];
+
+        const pixelData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const data = pixelData.data;
+        const startPos = (Math.floor(startY) * canvas.width + Math.floor(startX)) * 4;
+        const startR = data[startPos], startG = data[startPos+1], startB = data[startPos+2];
+        if(startR === fillR && startG === fillG && startB === fillB) return;
+
+        const stack = [[Math.floor(startX), Math.floor(startY)]];
+        while(stack.length) {
+            const [x, y] = stack.pop();
+            const pos = (y * canvas.width + x) * 4;
+            if(x < 0 || x >= canvas.width || y < 0 || y >= canvas.height) continue;
+            if(Math.abs(data[pos] - startR) > 10 || Math.abs(data[pos+1] - startG) > 10 || Math.abs(data[pos+2] - startB) > 10) continue;
+            data[pos] = fillR; data[pos+1] = fillG; data[pos+2] = fillB; data[pos+3] = 255;
+            stack.push([x+1, y], [x-1, y], [x, y+1], [x, y-1]);
+        }
+        ctx.putImageData(pixelData, 0, 0);
+    }
+</script>
+</body>
+</html>

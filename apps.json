@@ -1,0 +1,6 @@
+[
+    {"id": "overview", "name": "Dashboard", "icon": "fa-house"},
+    {"id": "hac", "name": "Grades", "icon": "fa-graduation-cap"},
+    {"id": "zipper", "name": "Zipper", "icon": "fa-file-zipper"},
+    {"id": "drive", "name": "Google Drive", "icon": "fa-google-drive"}
+]

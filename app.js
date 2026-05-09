@@ -1,66 +1,7 @@
 // ==========================================
-// 0. ENVIRONMENT DETECTION
-// ==========================================
-const IS_CODESPACES = window.location.hostname.includes('app.github.dev');
-const HAC_PROXY_URL = IS_CODESPACES 
-    ? window.location.origin        // e.g. https://glowing-barnacle-xxx-3000.app.github.dev
-    : 'https://corsproxy.io/?url='; // fallback for GitHub Pages
-
-console.log(`Environment: ${IS_CODESPACES ? 'Codespaces' : 'GitHub Pages'} — Proxy: ${HAC_PROXY_URL}`);
-
-// ==========================================
 // 1. SETTINGS & PERSONALIZATION LOGIC
 // ==========================================
 applySavedSettings(); // Run immediately on load
-
-// Add these to the top of app.js (global scope)
-window.tokenClient = null;
-window.accessToken = null;
-window.nextPageToken = null;
-
-// Update your loadPage function's specific logic:
-// Inside your loadPage function, find the 'if (page === "drive")' block:
-if (page === 'drive') {
-    maybeEnableButtons(); 
-}
-
-// Update this function to be more "aggressive"
-function maybeEnableButtons() {
-    const authBtn = document.getElementById('authorize_button');
-    const signoutBtn = document.getElementById('signout_button');
-
-    if (gapiInited && gisInited && authBtn) {
-        authBtn.style.display = 'inline-block';
-        
-        // If we already have a token, show signout and list files
-        if (gapi.client.getToken() !== null) {
-            if (signoutBtn) signoutBtn.style.display = 'inline-block';
-            listFiles();
-        }
-    } else {
-        console.log("Drive scripts or buttons not ready yet...");
-    }
-}
-
-function gapiLoaded() {
-    gapi.load('client', async () => {
-        await gapi.client.init({
-            discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'],
-        });
-        gapiInited = true;
-        maybeEnableButtons();
-    });
-}
-
-function gisLoaded() {
-    tokenClient = google.accounts.oauth2.initTokenClient({
-        client_id: '218198682167-8u3rjqchskh0q1f5nnbahs43hddaa51h.apps.googleusercontent.com',
-        scope: 'https://www.googleapis.com/auth/drive.metadata.readonly',
-        callback: '', // defined later in handleAuthClick
-    });
-    gisInited = true;
-    maybeEnableButtons();
-}
 
 function initSettings() {
     document.getElementById('set-title').value = document.title;
@@ -94,88 +35,66 @@ function applySavedSettings() {
 // ==========================================
 // 2. DYNAMIC PAGE ROUTING (SPA LOGIC)
 // ==========================================
-async function loadPage(page, btn) {
-    // 1. Use your original ID so we don't break the HTML connection
-    const contentArea = document.getElementById('main-content-area'); 
+async function loadPage(pageName, btn) {
+    const contentArea = document.getElementById('main-content-area');
     if (!contentArea) {
-        console.error("CRITICAL: Element 'main-content-area' not found in index.html");
+        console.error("CRITICAL: #main-content-area not found.");
         return;
     }
 
-    // 2. Update Sidebar Active States (from old version)
-    const navButtons = document.querySelectorAll('.nav-btn');
-    navButtons.forEach(b => b.classList.remove('active'));
+    // --- Update sidebar active state ---
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
     if (btn) btn.classList.add('active');
 
     try {
-        // 3. Fetch with Cache Buster (?v=...) to force browser to see your changes
-        const response = await fetch(`pages/${page}.html?v=${Date.now()}`);
-        if (!response.ok) throw new Error("Page not found");
-        
+        // Cache-bust so Chromebook never serves a stale page
+        const response = await fetch(`pages/${pageName}.html?v=${Date.now()}`);
+        if (!response.ok) throw new Error(`${response.status} — pages/${pageName}.html not found`);
+
+        // .text() only — never call both .json() and .text() on the same response
         const html = await response.text();
-        
-        // 4. Inject HTML
         contentArea.innerHTML = html;
 
-        // 5. Keep your Animation logic (from old version)
+        // Re-execute any <script> tags injected with the page HTML
+        // (innerHTML doesn't run scripts automatically)
+        contentArea.querySelectorAll('script').forEach(oldScript => {
+            const newScript = document.createElement('script');
+            Array.from(oldScript.attributes).forEach(attr =>
+                newScript.setAttribute(attr.name, attr.value)
+            );
+            newScript.textContent = oldScript.textContent;
+            oldScript.replaceWith(newScript);
+        });
+
+        // Fade-in animation
         contentArea.classList.remove('animate-fade-in');
-        void contentArea.offsetWidth; // Force reflow
+        void contentArea.offsetWidth; // force reflow
         contentArea.classList.add('animate-fade-in');
 
-        // 6. Log to your new Green Debug Console
-        console.log(`Successfully loaded: ${page}.html`);
+        // --- Page-specific init hooks ---
+        const hooks = {
+            gmail:    () => { if (accessToken) fetchEmails(); },
+            canvas:   loadCanvasData,
+            hac:      loadHacData,
+            playlist: renderPlaylist,
+            settings: initSettings,
+            zipper:   initZipper,
+        };
+        hooks[pageName]?.();
 
-        // 7. Page-Specific Logic (Combined)
-        if (page === 'gmail') {
-            // Check if login button exists before trying to hide it
-            const authBtn = document.getElementById('auth-gmail-btn');
-            if (authBtn && accessToken) authBtn.style.display = 'none';
-            if (accessToken) fetchEmails();
-        }
+        console.log(`Loaded: pages/${pageName}.html`);
 
-        // ... inside your loadPage function, after contentArea.innerHTML = html;
-        console.log(`Checking for Drive buttons on page: ${page}`);
-
-        if (page === 'drive') {
-            // We use a tiny timeout to ensure the HTML is fully painted in the browser
-            setTimeout(() => {
-                maybeEnableButtons();
-            }, 100); 
-        }
-        
-        if (page === 'canvas') loadCanvasData();
-        if (page === 'hac') loadHacData();
-        if (page === 'playlist') renderPlaylist(); // Triggers your music queue
-        if (page === 'settings') initSettings(); 
-
-    } catch (error) {
-        console.error("Error loading page:", error);
+    } catch (err) {
+        console.error('loadPage error: ' + err.message);
         contentArea.innerHTML = `
-            <div style="text-align: center; margin-top: 50px;">
-                <h2><i class="fa-solid fa-triangle-exclamation" style="color: var(--warning);"></i> Module Not Found</h2>
-                <p>Ensure you have a <b>pages/${page}.html</b> file created.</p>
+            <div style="text-align:center; margin-top:60px;">
+                <i class="fa-solid fa-triangle-exclamation" style="font-size:48px; color:var(--warning);"></i>
+                <h2 style="margin-top:16px;">Module Not Found</h2>
+                <p style="color:var(--text-muted); margin-top:8px;">
+                    Make sure <strong>pages/${pageName}.html</strong> exists.
+                </p>
+                <p style="color:#ef4444; font-size:12px; margin-top:8px;">${err.message}</p>
             </div>`;
-    }
-}
-
-function maybeEnableButtons() {
-    const authBtn = document.getElementById('authorize_button');
-    const signoutBtn = document.getElementById('signout_button');
-
-    console.log(`Internal Status - GAPI: ${gapiInited}, GIS: ${gisInited}, ButtonFound: ${!!authBtn}`);
-
-    if (authBtn) {
-        if (gapiInited && gisInited) {
-            authBtn.style.display = 'inline-block';
-            authBtn.style.visibility = 'visible'; // Extra safety
-            
-            if (gapi.client.getToken() !== null) {
-                if (signoutBtn) signoutBtn.style.display = 'inline-block';
-                listFiles();
-            }
-        } else {
-            console.log("Google Scripts are still loading...");
-        }
     }
 }
 
@@ -185,6 +104,7 @@ function maybeEnableButtons() {
 const CLIENT_ID = '218198682167-8u3rjqchskh0q1f5nnbahs43hddaa51h.apps.googleusercontent.com'; 
 const SCOPES = 'https://www.googleapis.com/auth/gmail.readonly';
 
+let tokenClient;
 let accessToken = null;
 let nextPageToken = null; 
 
@@ -228,29 +148,6 @@ function decodeBase64(str) {
         return "<i>Error decoding email text.</i>";
     }
 }
-
-window.handleAuthClick = function() {
-    console.log("Authorize button clicked!");
-    if (!tokenClient) {
-        console.error("Token client not initialized yet.");
-        return;
-    }
-
-    tokenClient.callback = async (resp) => {
-        if (resp.error !== undefined) {
-            throw (resp);
-        }
-        document.getElementById('signout_button').style.display = 'inline-block';
-        document.getElementById('authorize_button').innerText = 'Refresh Token';
-        await listFiles();
-    };
-
-    if (gapi.client.getToken() === null) {
-        tokenClient.requestAccessToken({prompt: 'consent'});
-    } else {
-        tokenClient.requestAccessToken({prompt: ''});
-    }
-};
 
 function getEmailBody(payload) {
     let bodyText = '';
@@ -583,24 +480,60 @@ function toggleConsole() {
     DC.style.display = DC.style.display === "none" ? "block" : "none";
 }
 
-function maybeEnableButtons() {
-    const authBtn = document.getElementById('authorize_button');
-    const signoutBtn = document.getElementById('signout_button');
+function initZipper() {
+    const folderInput = document.getElementById('folder-input');
+    const dropArea = document.getElementById('drop-area');
+    const dlBtn = document.getElementById('dl-btn');
+    const status = document.getElementById('status');
+    
+    if (!folderInput || !dropArea) return;
 
-    if (authBtn && signoutBtn) {
-        if (gapiInited && gisInited) {
-            authBtn.style.display = 'inline-block';
-            
-            // Change this: Always show signout if you want to see it now, 
-            // or keep it like this to only show when logged in:
-            if (gapi.client.getToken() !== null) {
-                signoutBtn.style.display = 'inline-block';
+    let currentZip = new JSZip();
+
+    dropArea.onclick = () => folderInput.click();
+
+    folderInput.onchange = (e) => {
+        const files = e.target.files;
+        if (files.length === 0) return;
+
+        currentZip = new JSZip();
+        let count = 0;
+
+        for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+            const fullPath = file.webkitRelativePath;
+            const pathParts = fullPath.split('/');
+            pathParts.shift(); 
+            const internalPath = pathParts.join('/');
+
+            if (internalPath) {
+                currentZip.file(internalPath, file);
+                count++;
             }
         }
-    }
-}
 
-if (page === 'drive') {
-    maybeEnableButtons(); // Show buttons if scripts already loaded
-    if (gapi.client.getToken()) listFiles(); // Load files if already logged in
+        status.innerText = `Prepared ${count} items.`;
+        dlBtn.disabled = false;
+    };
+
+    dlBtn.onclick = async () => {
+        status.innerText = "Zipping... please wait.";
+        dlBtn.disabled = true;
+
+        try {
+            const blob = await currentZip.generateAsync({type: "blob"});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = "bundle.zip";
+            a.click();
+            URL.revokeObjectURL(url);
+            status.innerText = "Download complete!";
+        } catch (err) {
+            status.innerText = "Error: " + err.message;
+            console.error(err);
+        } finally {
+            dlBtn.disabled = false;
+        }
+    };
 }
