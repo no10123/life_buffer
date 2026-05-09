@@ -1,1191 +1,428 @@
 <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,400;0,600;1,400&family=Lato:wght@400;700&family=Roboto+Mono&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 <script>
-  if (!window.MathJax) {
-    window.MathJax = {
-      tex: { inlineMath: [['$','$'],['\\(','\\)']] },
-      svg: { fontCache: 'global' },
-      startup: { typeset: false }
-    };
-    const s = document.createElement('script');
+if (!window.MathJax) {
+    window.MathJax = { tex: { inlineMath: [['$','$'],['\\(','\\)']] }, svg: { fontCache:'global' }, startup: { typeset:false } };
+    const s = document.createElement('script'); s.async = true;
     s.src = 'https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js';
-    s.async = true;
     document.head.appendChild(s);
-  }
+}
 </script>
 
 <style>
-/* ── Scoped reset & tokens ───────────────────────────────── */
-#atlas-root *{box-sizing:border-box;margin:0;padding:0;}
+/* ── Token swap: dark vars → your light palette, scoped to #atlas-root ── */
 #atlas-root {
-  --bg:       #0d0f14;
-  --surface:  #161b25;
-  --surface2: #1e2535;
-  --border:   #2a3347;
-  --accent:   #80cbc4;
-  --accent2:  #ce93d8;
-  --danger:   #ef9a9a;
-  --text:     #e8eaf0;
-  --text-muted:#7a8ba0;
-  --font-doc: 'Crimson Pro', Georgia, serif;
-  --font-ui:  'Lato', sans-serif;
-  --font-mono:'Roboto Mono', monospace;
-  --radius:   10px;
+    --bg-dark:     #f4f7f6;
+    --bg-panel:    #ffffff;
+    --bg-element:  #f0f4f8;
+    --text-main:   #333333;
+    --text-muted:  #888888;
+    --accent:      #3498db;
+    --accent-crit: #f39c12;
+    --accent-adv:  #27ae60;
+    --accent-dis:  #e74c3c;
+    --danger:      #e74c3c;
+    --border:      #e0e0e0;
+    --font-ui:     'Lato', sans-serif;
+    --font-doc:    'Crimson Pro', serif;
 
-  font-family: var(--font-ui);
-  color: var(--text);
-  background: var(--bg);
+    /* Sizing: fill UniDash content panel, be the positioning root for absolute screens */
+    position: relative;
+    width: 100%;
+    height: calc(100vh - 80px);
+    overflow: hidden;
+    background: var(--bg-dark);
+    color: var(--text-main);
+    font-family: var(--font-ui);
+    display: block;
+}
+#atlas-root * { box-sizing: border-box; }
 
-  /* Fill the UniDash content area exactly */
-  height: calc(100vh - 0px);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  border-radius: var(--radius);
+#atlas-root button {
+    cursor: pointer; border: none; border-radius: 4px; padding: 6px 12px;
+    font-family: var(--font-ui); transition: 0.2s;
+    display: inline-flex; align-items: center; justify-content: center; gap: 5px;
+}
+#atlas-root button:hover { filter: brightness(0.92); }
+#atlas-root button.primary { background: var(--accent); color: #fff; font-weight: bold; }
+#atlas-root button.icon-btn { background: transparent; color: var(--text-main); padding: 5px; }
+#atlas-root button.icon-btn:hover { background: rgba(0,0,0,0.06); filter: none; }
+#atlas-root button.active { background: var(--accent); color: #fff; }
+#atlas-root input, #atlas-root select {
+    background: var(--bg-element); border: 1px solid var(--border);
+    color: var(--text-main); padding: 5px; border-radius: 4px;
 }
 
-/* ── Screens ─────────────────────────────────────────────── */
-#atlas-root .screen        { display:none; flex:1; overflow:hidden; }
-#atlas-root .screen.active { display:flex; flex-direction:column; }
+/* SCREENS */
+#atlas-root .screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: none; }
+#atlas-root .screen.active { display: flex; }
 
-/* ── Module list screen ───────────────────────────────────── */
-#atlas-root #screen-modules {
-  align-items: center;
-  justify-content: flex-start;
-  padding: 40px 24px;
-  gap: 8px;
-  overflow-y: auto;
-}
-#atlas-root #screen-modules h1 {
-  font-family: var(--font-doc);
-  font-size: 2.6rem;
-  color: var(--accent);
-  letter-spacing: 1px;
-}
-#atlas-root .module-add-row {
-  display:flex; gap:10px; margin: 16px 0 8px;
-}
-#atlas-root .module-add-row input {
-  width: 260px;
-  padding: 9px 14px;
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  color: var(--text);
-  font-family: var(--font-ui);
-  font-size: 14px;
-  outline: none;
-}
-#atlas-root .module-add-row input:focus { border-color: var(--accent); }
+/* MODULE LIST */
+#atlas-root #screen-modules { flex-direction: column; align-items: center; padding-top: 40px; background: var(--bg-dark); overflow-y: auto; }
 #atlas-root .module-list {
-  width: 100%; max-width: 540px;
-  display: flex; flex-direction: column; gap: 10px;
+    width: 600px; max-width: 90%; background: var(--bg-panel); border-radius: 8px;
+    padding: 20px; max-height: 70vh; overflow-y: auto; border: 1px solid var(--border);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
 }
-#atlas-root .module-item {
-  display: flex;
-  align-items: center;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 16px 18px;
-  transition: border-color .2s, transform .15s;
-}
-#atlas-root .module-item:hover { border-color: var(--accent); transform:translateX(3px); }
+#atlas-root .module-item { display: flex; justify-content: space-between; padding: 15px; border-bottom: 1px solid var(--border); align-items: center; }
+#atlas-root .module-item:last-child { border-bottom: none; }
 
-/* ── Workspace screen ─────────────────────────────────────── */
-#atlas-root #screen-workspace {
-  flex-direction: row;
-  height: 100%;
-  overflow: hidden;
-}
-
-/* ── Sidebar ─────────────────────────────────────────────── */
+/* WORKSPACE */
+#atlas-root #screen-workspace { flex-direction: row; }
 #atlas-root .sidebar {
-  width: 220px;
-  min-width: 220px;
-  background: var(--surface);
-  border-right: 1px solid var(--border);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
+    width: 280px; background: var(--bg-panel); border-right: 1px solid var(--border);
+    display: flex; flex-direction: column; z-index: 20; box-shadow: 2px 0 6px rgba(0,0,0,0.05);
 }
 #atlas-root .sidebar-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 12px;
-  border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
+    padding: 12px 15px; border-bottom: 1px solid #1a252f;
+    display: flex; justify-content: space-between; align-items: center;
+    background: #2c3e50;
 }
-#atlas-root .sidebar-header span { flex:1; font-weight:700; font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-#atlas-root .notes-list { flex:1; overflow-y:auto; padding:8px; display:flex; flex-direction:column; gap:4px; }
+#atlas-root .sidebar-header button { color: #fff; }
+#atlas-root .sidebar-header span { color: #fff; font-weight: bold; }
+#atlas-root .notes-list { flex-grow: 1; overflow-y: auto; }
 #atlas-root .sidebar-note-item {
-  padding: 10px 12px;
-  border-radius: 8px;
-  border-left: 4px solid transparent;
-  cursor: pointer;
-  transition: background .15s;
+    padding: 14px 15px; border-bottom: 1px solid var(--border);
+    cursor: pointer; border-left: 4px solid transparent; transition: background 0.15s;
 }
-#atlas-root .sidebar-note-item:hover { background: var(--surface2); }
-#atlas-root .sidebar-note-item.active { background: var(--surface2); }
-#atlas-root .sb-title { display:block; font-weight:700; font-size:13px; }
-#atlas-root .sb-desc  { display:block; font-size:11px; color:var(--text-muted); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+#atlas-root .sidebar-note-item:hover { background: #f5f8ff; }
+#atlas-root .sidebar-note-item.active { background: #eaf4fb; border-left-color: var(--accent); }
+#atlas-root .sb-title { font-weight: bold; font-family: var(--font-doc); font-size: 1.05em; display: block; color: #2c3e50; }
+#atlas-root .sb-desc  { font-size: 0.85em; color: var(--text-muted); font-style: italic; display: block; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 
-/* ── Viewport / main area ─────────────────────────────────── */
-#atlas-root .viewport-container {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  position: relative;
-  overflow: hidden;
-  background: var(--bg);
-}
+/* VIEWPORT */
+#atlas-root .viewport-container { flex-grow: 1; position: relative; background: var(--bg-dark); overflow: hidden; display: flex; flex-direction: column; }
 #atlas-root .view-switcher {
-  display: flex;
-  border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
+    position: absolute; top: 12px; left: 50%; transform: translateX(-50%);
+    z-index: 55; background: var(--bg-panel); border-radius: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.12); display: flex;
+    overflow: hidden; border: 1px solid var(--border);
 }
-#atlas-root .view-tab {
-  padding: 10px 22px;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 1.5px;
-  cursor: pointer;
-  color: var(--text-muted);
-  border-bottom: 2px solid transparent;
-  transition: color .2s, border-color .2s;
-}
-#atlas-root .view-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+#atlas-root .view-tab { padding: 8px 22px; cursor: pointer; font-size: 0.8em; font-weight: bold; color: var(--text-muted); transition: 0.2s; }
+#atlas-root .view-tab:hover { color: var(--text-main); background: rgba(0,0,0,0.04); }
+#atlas-root .view-tab.active { background: var(--accent); color: #fff; }
 
-#atlas-root .main-view { display:none; flex:1; position:relative; overflow:hidden; }
-#atlas-root .main-view.active { display:flex; flex-direction:column; }
+/* VIEWS */
+#atlas-root .main-view { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: none; }
+#atlas-root .main-view.active { display: block; }
 
-/* ── Map view ─────────────────────────────────────────────── */
-#atlas-root #view-map { position:relative; }
-#atlas-root .map-toolbar {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 14px;
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
-  flex-wrap: wrap;
-}
-#atlas-root #layer-whiteboard {
-  position: absolute; top:0; left:0;
-  width:100%; height:100%;
-  pointer-events: none;
-}
-#atlas-root #layer-connections {
-  position: absolute; top:0; left:0;
-  width:100%; height:100%;
-  pointer-events: none;
-}
-#atlas-root #layer-nodes {
-  position: absolute; top:0; left:0;
-  width:100%; height:100%;
-}
-#atlas-root .map-node {
-  position: absolute;
-  width: 44px; height: 44px;
-  border-radius: 50%;
-  display: flex; align-items:center; justify-content:center;
-  font-weight: 700; font-size: 15px; color: #1a1a2e;
-  cursor: pointer;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.4);
-  transition: transform .15s, box-shadow .15s;
-  user-select: none;
-}
-#atlas-root .map-node:hover { transform: scale(1.12); box-shadow:0 6px 20px rgba(0,0,0,0.5); }
-#atlas-root .connection-line {
-  stroke: var(--accent);
-  stroke-width: 1.5;
-  stroke-dasharray: 4 4;
-  opacity: 0.5;
-}
-#atlas-root #map-text-input {
-  position: absolute;
-  display: none;
-  background: transparent;
-  border: none;
-  border-bottom: 1px dashed var(--accent);
-  color: var(--accent);
-  font-size: 18px;
-  font-family: var(--font-doc);
-  outline: none;
-  z-index: 10;
-  min-width: 120px;
-}
+/* DICE VIEW */
+#atlas-root #view-dice { display: none; width: 100%; height: 100%; background: var(--bg-dark); align-items: center; justify-content: center; flex-direction: column; }
+#atlas-root #view-dice.active { display: flex; }
+#atlas-root .dice-container { width: 85%; height: 82%; background: var(--bg-panel); border-radius: 12px; border: 1px solid var(--border); display: flex; box-shadow: 0 4px 16px rgba(0,0,0,0.08); }
+#atlas-root .dice-controls { width: 200px; padding: 20px; background: #f8f9fa; border-right: 1px solid var(--border); display: flex; flex-direction: column; gap: 8px; border-radius: 12px 0 0 12px; overflow-y: auto; }
+#atlas-root .dice-btn { padding: 8px; background: var(--bg-element); color: var(--text-main); border: 1px solid var(--border); border-radius: 6px; font-weight: bold; display: flex; justify-content: space-between; font-size: 0.9em; cursor: pointer; transition: 0.15s; }
+#atlas-root .dice-btn:hover { border-color: var(--accent); color: var(--accent); background: #eaf4fb; }
+#atlas-root .adv-toggles { display: flex; gap: 5px; margin-bottom: 8px; justify-content: center; }
+#atlas-root .adv-btn { flex: 1; padding: 5px; font-size: 0.7em; opacity: 0.5; border: 1px solid transparent; background: var(--bg-element); cursor: pointer; border-radius: 4px; transition: 0.15s; }
+#atlas-root .adv-btn.active { opacity: 1; font-weight: bold; }
+#atlas-root .adv-btn.active[data-mode="adv"]  { background: var(--accent-adv); color: #fff; border-color: var(--accent-adv); }
+#atlas-root .adv-btn.active[data-mode="dis"]  { background: var(--accent-dis); color: #fff; border-color: var(--accent-dis); }
+#atlas-root .adv-btn.active[data-mode="norm"] { background: #2c3e50; color: #fff; border-color: #2c3e50; }
+#atlas-root .dice-tray-area { flex-grow: 1; padding: 24px; display: flex; flex-direction: column; }
+#atlas-root .dice-tray { flex-grow: 1; border: 2px dashed var(--border); border-radius: 8px; background: var(--bg-dark); margin-bottom: 16px; padding: 16px; display: flex; flex-wrap: wrap; align-content: flex-start; gap: 12px; overflow-y: auto; }
+#atlas-root .tray-die { width: 60px; height: 60px; background: var(--bg-panel); border: 3px solid var(--border); border-radius: 12px; color: #2c3e50; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; font-weight: bold; font-family: var(--font-doc); position: relative; box-shadow: 0 2px 6px rgba(0,0,0,0.08); cursor: pointer; user-select: none; transition: transform 0.1s; }
+#atlas-root .tray-die:hover { transform: scale(1.05); border-color: var(--accent); }
+#atlas-root .tray-die::after { content: attr(data-type); position: absolute; bottom: 2px; right: 4px; font-size: 0.6rem; opacity: 0.4; font-family: sans-serif; }
+#atlas-root .tray-die[data-state="adv"] { border-color: var(--accent-adv); color: var(--accent-adv); }
+#atlas-root .tray-die[data-state="adv"]::before { content: 'ADV'; position: absolute; top: -9px; background: var(--bg-panel); font-size: 0.5em; padding: 0 3px; color: var(--accent-adv); border-radius: 2px; }
+#atlas-root .tray-die[data-state="dis"] { border-color: var(--accent-dis); color: var(--accent-dis); }
+#atlas-root .tray-die[data-state="dis"]::before { content: 'DIS'; position: absolute; top: -9px; background: var(--bg-panel); font-size: 0.5em; padding: 0 3px; color: var(--accent-dis); border-radius: 2px; }
+#atlas-root .rolling { animation: atlasShake 0.1s infinite; background: var(--accent) !important; color: #fff !important; border-color: var(--accent) !important; }
+#atlas-root .crit-anim { animation: atlasCrit 0.6s ease-out alternate infinite; border-color: var(--accent-crit) !important; color: var(--accent-crit) !important; box-shadow: 0 0 15px var(--accent-crit); }
+@keyframes atlasShake { 0%{transform:translate(1px,1px) rotate(0deg)} 25%{transform:translate(-1px,-2px) rotate(-1deg)} 50%{transform:translate(-3px,0) rotate(1deg)} 75%{transform:translate(3px,2px) rotate(0)} 100%{transform:translate(1px,-1px) rotate(-1deg)} }
+@keyframes atlasCrit  { from{transform:scale(1);box-shadow:0 0 10px var(--accent-crit)} to{transform:scale(1.15);box-shadow:0 0 25px var(--accent-crit)} }
+#atlas-root .dice-footer { display: flex; gap: 20px; align-items: center; justify-content: space-between; height: 60px; }
+#atlas-root .total-display { font-size: 2rem; font-weight: bold; color: var(--accent); font-family: var(--font-doc); display: flex; flex-direction: column; align-items: flex-end; }
+#atlas-root .avg-display { font-size: 0.8rem; color: var(--text-muted); font-weight: normal; font-family: var(--font-ui); }
 
-/* ── Editor overlay ──────────────────────────────────────── */
-#atlas-root #view-editor {
-  position: absolute;
-  bottom: 0; left: 0; right: 0;
-  height: 0;
-  background: var(--surface);
-  border-top: 2px solid var(--accent);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  transition: height .3s cubic-bezier(.4,0,.2,1);
-  z-index: 20;
-}
-#atlas-root #view-editor.active { height: 65%; }
-#atlas-root .editor-toolbar {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 7px 12px;
-  border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
-  flex-wrap: wrap;
-}
-#atlas-root .editor-workspace {
-  flex: 1;
-  overflow-y: auto;
-  padding: 20px;
-  display: flex;
-  justify-content: center;
-}
-#atlas-root .paper {
-  background: #fff;
-  color: #1a1a2e;
-  width: 100%;
-  max-width: 700px;
-  min-height: 100%;
-  border-radius: 6px;
-  padding: 32px 40px;
-  box-shadow: 0 8px 30px rgba(0,0,0,0.4);
-}
-#atlas-root #doc-title {
-  width: 100%;
-  font-family: var(--font-doc);
-  font-size: 1.9rem;
-  font-weight: 600;
-  border: none; outline: none;
-  background: transparent;
-  color: #1a1a2e;
-  margin-bottom: 6px;
-}
-#atlas-root #doc-desc {
-  width: 100%;
-  font-size: 13px;
-  color: #666;
-  border: none; outline: none;
-  background: transparent;
-  margin-bottom: 16px;
-  border-bottom: 1px solid #eee;
-  padding-bottom: 10px;
-}
-#atlas-root #editor-content {
-  min-height: 200px;
-  outline: none;
-  font-family: var(--font-doc);
-  font-size: 1.05rem;
-  line-height: 1.8;
-  color: #1a1a2e;
-}
-#atlas-root .smart-link {
-  color: #3b82f6;
-  text-decoration: underline;
-  cursor: pointer;
-  font-style: italic;
-}
-#atlas-root .editor-stats {
-  margin-left: auto;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 12px;
-}
-#atlas-root .stat-item { display:flex; flex-direction:column; align-items:center; }
-#atlas-root .stat-val   { font-weight:700; color:var(--accent); font-size:13px; }
-#atlas-root .stat-label { color:var(--text-muted); font-size:10px; letter-spacing:.5px; }
-#atlas-root .color-picker { display:flex; gap:5px; }
-#atlas-root .color-option {
-  width:18px; height:18px; border-radius:50%; cursor:pointer;
-  border: 2px solid transparent;
-  transition: transform .15s, border-color .15s;
-}
-#atlas-root .color-option:hover  { transform:scale(1.2); }
-#atlas-root .color-option.active { border-color: white; transform:scale(1.2); }
+/* MAP */
+#atlas-root #view-map { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+#atlas-root .map-node { position: absolute; width: 44px; height: 44px; border-radius: 50%; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1.1rem; cursor: grab; box-shadow: 0 3px 8px rgba(0,0,0,0.2); border: 2px solid rgba(255,255,255,0.5); user-select: none; z-index: 10; transition: transform 0.15s; }
+#atlas-root .map-node:hover { transform: scale(1.1); z-index: 100; }
+#atlas-root .map-toolbar { position: absolute; top: 16px; right: 16px; z-index: 50; background: var(--bg-panel); padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border); display: flex; gap: 8px; align-items: center; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+#atlas-root .draw-options { display: flex; gap: 8px; align-items: center; border-left: 1px solid var(--border); padding-left: 10px; }
+#atlas-root .color-well { width: 30px; height: 30px; border-radius: 50%; overflow: hidden; border: 2px solid var(--border); cursor: pointer; position: relative; }
+#atlas-root .color-well input { opacity: 0; position: absolute; top: -10px; left: -10px; width: 50px; height: 50px; cursor: pointer; }
+#atlas-root #map-text-input { position: absolute; display: none; z-index: 100; background: transparent; border: 1px dashed var(--accent); color: #2c3e50; font-family: var(--font-doc); font-size: 20px; padding: 5px; outline: none; }
+#atlas-root #layer-whiteboard  { position: absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; }
+#atlas-root #layer-connections { position: absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; }
+#atlas-root #layer-nodes       { position: absolute; top:0; left:0; width:100%; height:100%; }
+#atlas-root .connection-line   { stroke: var(--accent); stroke-width: 1.5; stroke-dasharray: 5 4; opacity: 0.5; }
 
-/* ── Dice view ────────────────────────────────────────────── */
-#atlas-root .dice-container { display:flex; height:100%; }
-#atlas-root .dice-controls {
-  width:130px; min-width:130px;
-  background: var(--surface);
-  border-right: 1px solid var(--border);
-  padding: 14px 10px;
-  display: flex; flex-direction: column; gap: 6px;
-  overflow-y: auto;
-}
-#atlas-root .dice-tray-area {
-  flex:1; display:flex; flex-direction:column; overflow:hidden;
-}
-#atlas-root .dice-tray {
-  flex:1; padding:16px;
-  display: flex; flex-wrap:wrap;
-  align-content: flex-start;
-  gap:12px; overflow-y:auto;
-}
-#atlas-root .dice-footer {
-  display:flex; align-items:center; justify-content:space-between;
-  padding:12px 20px;
-  background: var(--surface);
-  border-top: 1px solid var(--border);
-  gap:12px;
-}
-#atlas-root .total-display {
-  display:flex; flex-direction:column; align-items:center;
-  min-width:100px;
-}
-#atlas-root #dice-total-display {
-  font-size:2rem; font-weight:700; color:var(--accent);
-  font-family: var(--font-mono);
-}
-#atlas-root .avg-display { font-size:11px; color:var(--text-muted); }
-#atlas-root .adv-toggles { display:flex; gap:4px; }
-#atlas-root .adv-btn {
-  flex:1; padding:5px 0; font-size:10px; font-weight:700;
-  background:transparent; border:1px solid var(--border);
-  border-radius:5px; color:var(--text-muted); cursor:pointer;
-  transition: background .15s, color .15s;
-}
-#atlas-root .adv-btn.active { background:var(--accent); color:#0d0f14; border-color:var(--accent); }
-#atlas-root .tray-die {
-  width:60px; height:60px;
-  display:flex; align-items:center; justify-content:center;
-  font-family:var(--font-mono); font-size:1.3rem; font-weight:700;
-  border:2px solid var(--border); border-radius:12px;
-  cursor:pointer; user-select:none;
-  background: var(--surface2);
-  transition: transform .1s, border-color .2s, background .2s;
-  position:relative;
-}
-#atlas-root .tray-die:hover { transform:scale(1.08); border-color:var(--accent); }
-#atlas-root .tray-die[data-state="adv"]  { border-color:#81c784; background:rgba(129,199,132,.12); }
-#atlas-root .tray-die[data-state="dis"]  { border-color:var(--danger); background:rgba(239,154,154,.12); }
-#atlas-root .tray-die.rolling { animation: diceRoll .08s infinite alternate; }
-#atlas-root .tray-die.crit-anim { animation: critFlash .6s ease 3; }
-@keyframes diceRoll   { from{transform:rotate(-8deg) scale(.95)} to{transform:rotate(8deg) scale(1.05)} }
-@keyframes critFlash  { 0%,100%{box-shadow:none} 50%{box-shadow:0 0 18px 4px gold; border-color:gold;} }
-
-/* ── Shared UI controls ───────────────────────────────────── */
-#atlas-root button { font-family:var(--font-ui); cursor:pointer; }
-#atlas-root button.primary {
-  padding: 8px 18px;
-  background: var(--accent);
-  color: #0d0f14;
-  border: none; border-radius: var(--radius);
-  font-weight: 700; font-size:13px;
-  transition: opacity .15s;
-}
-#atlas-root button.primary:hover { opacity:.85; }
-#atlas-root button.icon-btn {
-  background:transparent; border:none;
-  color:var(--text-muted);
-  display:flex; align-items:center; gap:4px;
-  font-size:13px; padding:5px 8px; border-radius:6px;
-  transition:background .15s, color .15s;
-}
-#atlas-root button.icon-btn:hover { background:var(--surface2); color:var(--text); }
-#atlas-root button.icon-btn.active { color:var(--accent); }
-#atlas-root .dice-btn {
-  width:100%; padding:7px 6px; text-align:left;
-  background:transparent; border:1px solid var(--border);
-  border-radius:7px; color:var(--text); font-size:13px;
-  display:flex; justify-content:space-between; align-items:center;
-  transition:border-color .15s, background .15s;
-}
-#atlas-root .dice-btn:hover { border-color:var(--accent); background:var(--surface2); }
-#atlas-root .draw-options {
-  display:flex; align-items:center; gap:8px; flex-wrap:wrap;
-}
-#atlas-root .draw-options.hidden { display:none; }
-#atlas-root .color-well input[type=color] {
-  width:28px; height:28px; border:none; border-radius:50%;
-  cursor:pointer; background:transparent; padding:0;
-}
-#atlas-root .divider { width:1px; height:20px; background:var(--border); margin:0 4px; }
-#atlas-root select {
-  background:var(--surface2); color:var(--text);
-  border:1px solid var(--border); border-radius:6px;
-  padding:4px 8px; font-size:13px; cursor:pointer; outline:none;
-}
-#atlas-root input[type=number] {
-  background:var(--surface2); color:var(--text);
-  border:1px solid var(--border); border-radius:6px;
-  padding:6px 8px; font-size:13px; outline:none;
-}
-#atlas-root input[type=range] { accent-color:var(--accent); cursor:pointer; }
-/* scrollbars */
-#atlas-root ::-webkit-scrollbar { width:5px; height:5px; }
+/* EDITOR */
+#atlas-root #view-editor { position: absolute; top:0; left:0; width:100%; height:100%; background: var(--bg-dark); display:none; flex-direction:column; z-index:60; }
+#atlas-root #view-editor.active { display: flex; }
+#atlas-root .editor-toolbar { background: #2c3e50; border-bottom: 1px solid #1a252f; padding: 10px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; flex-shrink: 0; }
+#atlas-root .editor-toolbar button { color: #fff; }
+#atlas-root .editor-toolbar button.icon-btn:hover { background: rgba(255,255,255,0.1); filter:none; }
+#atlas-root .editor-toolbar select { background: #1a252f; color: #fff; border-color: #1a252f; }
+#atlas-root .divider { width: 1px; height: 24px; background: rgba(255,255,255,0.2); margin: 0 4px; }
+#atlas-root .editor-stats { margin-left: auto; display: flex; gap: 12px; align-items: center; font-size: 0.75em; background: rgba(0,0,0,0.2); padding: 4px 10px; border-radius: 4px; }
+#atlas-root .stat-item { display: flex; flex-direction: column; align-items: flex-end; line-height: 1.1; }
+#atlas-root .stat-val   { font-weight: bold; color: var(--accent); }
+#atlas-root .stat-label { font-size: 0.8em; color: rgba(255,255,255,0.5); }
+#atlas-root .editor-workspace { flex-grow:1; overflow-y:auto; padding:32px; display:flex; justify-content:center; background: var(--bg-dark); }
+#atlas-root .paper { width:800px; max-width:100%; min-height:90%; background:var(--bg-panel); padding:50px; border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,0.08); font-family:var(--font-doc); font-size:1.1em; line-height:1.6; }
+#atlas-root #doc-title { font-size:2em; font-family:var(--font-doc); background:transparent; border:none; width:100%; color:#2c3e50; margin-bottom:10px; border-bottom:2px solid var(--border); outline:none; font-weight:600; }
+#atlas-root #doc-desc  { font-size:1em; color:var(--text-muted); font-style:italic; width:100%; background:transparent; border:none; margin-bottom:24px; outline:none; }
+#atlas-root #editor-content { font-family:var(--font-doc); font-size:1.05em; line-height:1.7; outline:none; min-height:400px; color:var(--text-main); white-space:pre-wrap; overflow-wrap:break-word; }
+#atlas-root .smart-link { color:var(--accent); text-decoration:underline; cursor:pointer; background:rgba(52,152,219,0.08); padding:0 4px; border-radius:3px; }
+#atlas-root .hidden { display:none !important; }
+#atlas-root .color-picker { display:flex; gap:5px; margin-right:10px; }
+#atlas-root .color-option { width:20px; height:20px; border-radius:50%; cursor:pointer; border:2px solid transparent; opacity:0.8; transition:0.15s; }
+#atlas-root .color-option:hover  { opacity:1; transform:scale(1.15); }
+#atlas-root .color-option.active { border-color:#2c3e50; opacity:1; transform:scale(1.15); }
+#atlas-root ::-webkit-scrollbar { width:5px; }
 #atlas-root ::-webkit-scrollbar-track { background:transparent; }
 #atlas-root ::-webkit-scrollbar-thumb { background:var(--border); border-radius:3px; }
 </style>
 
-<!-- ═══════════════════════════════════════════════════════
-     HTML STRUCTURE
-═══════════════════════════════════════════════════════ -->
-<div id="atlas-root">
+<!-- HTML: same as original, just wrapped in <section id="atlas-root"> instead of <body> -->
+<section id="atlas-root">
 
-  <!-- MODULE LIST SCREEN -->
-  <div id="screen-modules" class="screen active">
-    <h1>Atlas V3.5</h1>
-    <p style="color:var(--text-muted);margin:6px 0 20px;">Medical Note Taker &amp; Advanced Dice</p>
-    <div class="module-add-row">
-      <input type="text" id="new-module-name" placeholder="New Atlas name...">
-      <button class="primary" onclick="atl_createModule()">Create</button>
-    </div>
-    <div class="module-list" id="module-list-container"></div>
-  </div>
-
-  <!-- WORKSPACE SCREEN -->
-  <div id="screen-workspace" class="screen">
-
-    <div class="sidebar">
-      <div class="sidebar-header">
-        <button class="icon-btn" onclick="atl_saveAndExit()" title="Back">
-          <span class="material-icons" style="font-size:18px;">arrow_back</span>
-        </button>
-        <span id="current-module-title">Atlas</span>
-        <button class="icon-btn" onclick="atl_createNote()" title="New Note">
-          <span class="material-icons" style="font-size:18px;">add</span>
-        </button>
-      </div>
-      <div class="notes-list" id="sidebar-notes"></div>
+    <div id="screen-modules" class="screen active">
+        <h1 style="font-family:var(--font-doc);font-size:3rem;color:#2c3e50;margin-bottom:6px;">Atlas V3.5</h1>
+        <p style="color:var(--text-muted);margin-bottom:24px;">Medical Note Taker &amp; Advanced Dice</p>
+        <div style="display:flex;gap:10px;margin-bottom:16px;">
+            <input type="text" id="new-module-name" placeholder="New Atlas Name..." style="width:250px;padding:9px 14px;font-size:14px;">
+            <button class="primary" onclick="createModule()">Create</button>
+        </div>
+        <div class="module-list" id="module-list-container"></div>
     </div>
 
-    <div class="viewport-container">
-
-      <!-- Tab bar -->
-      <div class="view-switcher" id="view-tabs">
-        <div class="view-tab active" onclick="atl_switchView('map')">MAP</div>
-        <div class="view-tab"        onclick="atl_switchView('dice')">DICE</div>
-      </div>
-
-      <!-- MAP VIEW -->
-      <div id="view-map" class="main-view active">
-        <div class="map-toolbar">
-          <button class="icon-btn" onclick="atl_clearWhiteboard()" title="Clear drawing">
-            <span class="material-icons" style="font-size:18px;">delete_outline</span>
-          </button>
-          <button class="icon-btn" onclick="atl_undo()" title="Undo">
-            <span class="material-icons" style="font-size:18px;">undo</span>
-          </button>
-          <div class="divider"></div>
-          <button id="btn-draw-mode" class="icon-btn" onclick="atl_toggleDrawMode()" title="Draw mode">
-            <span class="material-icons" style="font-size:18px;">edit</span>
-          </button>
-          <div id="draw-tools" class="draw-options hidden">
-            <div class="color-well"><input type="color" id="brush-color" value="#80cbc4" onchange="atl_updateBrush()"></div>
-            <select id="brush-type" onchange="atl_updateBrush()" style="height:30px;width:100px;">
-              <option value="pen">Pen</option>
-              <option value="marker">Marker</option>
-              <option value="spray">Spray</option>
-              <option value="fill">Fill</option>
-              <option value="rect">Box</option>
-              <option value="circle">Circle</option>
-              <option value="text">Text</option>
-              <option value="eraser">Eraser</option>
-            </select>
-            <input type="range" id="brush-size" min="1" max="50" value="3" onchange="atl_updateBrush()" style="width:60px;">
-          </div>
+    <div id="screen-workspace" class="screen">
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <button class="icon-btn" onclick="saveAndExit()"><span class="material-icons">arrow_back</span></button>
+                <span id="current-module-title">Atlas</span>
+                <button class="primary" onclick="createNote()"><span class="material-icons">add</span></button>
+            </div>
+            <div class="notes-list" id="sidebar-notes"></div>
         </div>
 
-        <canvas id="layer-whiteboard"></canvas>
-        <input type="text" id="map-text-input" placeholder="Type &amp; Enter...">
-        <svg id="layer-connections"></svg>
-        <div id="layer-nodes"></div>
-      </div>
+        <div class="viewport-container">
+            <div class="view-switcher" id="view-tabs">
+                <div class="view-tab active" onclick="switchMainView('map')">MAP</div>
+                <div class="view-tab" onclick="switchMainView('dice')">DICE</div>
+            </div>
 
-      <!-- DICE VIEW -->
-      <div id="view-dice" class="main-view">
-        <div class="dice-container">
-          <div class="dice-controls">
-            <div style="color:var(--text-muted);font-size:10px;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Mode</div>
-            <div class="adv-toggles">
-              <button class="adv-btn" data-mode="dis"  onclick="atl_setGlobalMode('dis')">DIS</button>
-              <button class="adv-btn active" data-mode="norm" onclick="atl_setGlobalMode('norm')">NRM</button>
-              <button class="adv-btn" data-mode="adv"  onclick="atl_setGlobalMode('adv')">ADV</button>
+            <div id="view-map" class="main-view active">
+                <div class="map-toolbar">
+                    <button class="icon-btn" onclick="clearWhiteboard()"><span class="material-icons">delete_outline</span></button>
+                    <button class="icon-btn" onclick="undo()"><span class="material-icons">undo</span></button>
+                    <div class="divider" style="background:var(--border);"></div>
+                    <button id="btn-draw-mode" class="icon-btn" onclick="toggleDrawMode()"><span class="material-icons">edit</span></button>
+                    <div id="draw-tools" class="draw-options hidden">
+                        <div class="color-well"><input type="color" id="brush-color" value="#3498db" onchange="updateBrush()"></div>
+                        <select id="brush-type" onchange="updateBrush()" style="height:30px;width:100px;">
+                            <option value="pen">Pen</option><option value="marker">Marker</option>
+                            <option value="spray">Spray</option><option value="fill">Fill</option>
+                            <option value="rect">Box</option><option value="circle">Circle</option>
+                            <option value="text">Text</option><option value="eraser">Eraser</option>
+                        </select>
+                        <input type="range" id="brush-size" min="1" max="50" value="3" onchange="updateBrush()" style="width:60px;">
+                    </div>
+                </div>
+                <canvas id="layer-whiteboard"></canvas>
+                <input type="text" id="map-text-input" placeholder="Type &amp; Enter...">
+                <svg id="layer-connections" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;"></svg>
+                <div id="layer-nodes" style="position:absolute;top:0;left:0;width:100%;height:100%;"></div>
             </div>
-            <div style="color:var(--text-muted);font-size:10px;text-transform:uppercase;letter-spacing:1px;margin:10px 0 4px;">Dice</div>
-            <button class="dice-btn" onclick="atl_addDie(4)">d4   <span>▲</span></button>
-            <button class="dice-btn" onclick="atl_addDie(6)">d6   <span>■</span></button>
-            <button class="dice-btn" onclick="atl_addDie(8)">d8   <span>◆</span></button>
-            <button class="dice-btn" onclick="atl_addDie(10)">d10 <span>⬖</span></button>
-            <button class="dice-btn" onclick="atl_addDie(12)">d12 <span>⬢</span></button>
-            <button class="dice-btn" onclick="atl_addDie(20)">d20 <span>⬡</span></button>
-            <button class="dice-btn" onclick="atl_addDie(100)">d% <span>●</span></button>
-            <button class="dice-btn" onclick="atl_addCustomDie()">d? <span>?</span></button>
-            <div style="margin-top:auto;"></div>
-            <button class="dice-btn" style="border-color:var(--danger);color:var(--danger);" onclick="atl_clearTray()">Clear</button>
-          </div>
 
-          <div class="dice-tray-area">
-            <div class="dice-tray" id="dice-tray-content">
-              <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-style:italic;font-size:13px;">
-                Add dice — click to toggle Adv/Dis, right-click to remove.
-              </div>
+            <div id="view-dice" class="main-view">
+                <div class="dice-container">
+                    <div class="dice-controls">
+                        <div style="color:var(--text-muted);font-size:0.75em;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Global Mode</div>
+                        <div class="adv-toggles">
+                            <button class="adv-btn" data-mode="dis" onclick="setGlobalMode('dis')">DIS</button>
+                            <button class="adv-btn active" data-mode="norm" onclick="setGlobalMode('norm')">NORM</button>
+                            <button class="adv-btn" data-mode="adv" onclick="setGlobalMode('adv')">ADV</button>
+                        </div>
+                        <div style="color:var(--text-muted);font-size:0.75em;text-transform:uppercase;letter-spacing:1px;margin:10px 0 4px;">Add Dice</div>
+                        <button class="dice-btn" onclick="addDie(4)">d4 <span>▲</span></button>
+                        <button class="dice-btn" onclick="addDie(6)">d6 <span>■</span></button>
+                        <button class="dice-btn" onclick="addDie(8)">d8 <span>◆</span></button>
+                        <button class="dice-btn" onclick="addDie(10)">d10 <span>⬖</span></button>
+                        <button class="dice-btn" onclick="addDie(12)">d12 <span>⬢</span></button>
+                        <button class="dice-btn" onclick="addDie(20)">d20 <span>⬡</span></button>
+                        <button class="dice-btn" onclick="addDie(100)">d100 <span>●</span></button>
+                        <button class="dice-btn" onclick="addCustomDie()">d? <span>?</span></button>
+                        <div style="margin-top:auto;"></div>
+                        <button class="dice-btn" style="border-color:var(--danger);color:var(--danger);" onclick="clearTray()">Clear Tray</button>
+                    </div>
+                    <div class="dice-tray-area">
+                        <div class="dice-tray" id="dice-tray-content">
+                            <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-style:italic;font-size:13px;">
+                                Add dice — click to toggle Adv/Dis, right-click to remove.
+                            </div>
+                        </div>
+                        <div class="dice-footer">
+                            <div style="display:flex;flex-direction:column;gap:3px;">
+                                <label style="font-size:0.8em;color:var(--text-muted);">Modifier</label>
+                                <input type="number" id="dice-modifier" value="0" onchange="calculateAverage()" style="width:80px;text-align:center;font-weight:bold;">
+                            </div>
+                            <button class="primary" onclick="rollAllDice()" style="padding:14px 36px;font-size:1.15rem;">ROLL</button>
+                            <div class="total-display">
+                                <span style="font-size:0.45em;color:var(--text-muted);letter-spacing:1px;">TOTAL</span>
+                                <span id="dice-total-display">0</span>
+                                <span id="dice-avg-display" class="avg-display">Avg: 0</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div class="dice-footer">
-              <div style="display:flex;flex-direction:column;gap:3px;">
-                <label style="font-size:10px;color:var(--text-muted);">Modifier</label>
-                <input type="number" id="dice-modifier" value="0" onchange="atl_calculateAverage()" style="width:70px;text-align:center;font-weight:700;">
-              </div>
-              <button class="primary" onclick="atl_rollAllDice()" style="padding:12px 32px;font-size:1.1rem;letter-spacing:1px;">ROLL</button>
-              <div class="total-display">
-                <span style="font-size:10px;color:var(--text-muted);letter-spacing:1px;">TOTAL</span>
-                <span id="dice-total-display">—</span>
-                <span id="dice-avg-display" class="avg-display">Avg: 0</span>
-              </div>
+
+            <div id="view-editor">
+                <div class="editor-toolbar">
+                    <button class="icon-btn" onclick="closeEditor()"><span class="material-icons">keyboard_arrow_down</span> Minimize</button>
+                    <div class="divider"></div>
+                    <span style="font-size:0.8em;color:rgba(255,255,255,0.6);margin-right:4px;">Node:</span>
+                    <div class="color-picker" id="node-color-picker"></div>
+                    <div class="divider"></div>
+                    <button class="icon-btn" onclick="formatDoc('bold')"><span class="material-icons">format_bold</span></button>
+                    <button class="icon-btn" onclick="formatDoc('italic')"><span class="material-icons">format_italic</span></button>
+                    <div class="divider"></div>
+                    <select onchange="formatDoc('fontName',this.value)" style="height:28px;font-size:12px;width:110px;">
+                        <option value="Crimson Pro">Medical</option>
+                        <option value="Lato">Modern</option>
+                        <option value="Roboto Mono">Code</option>
+                    </select>
+                    <div class="editor-stats">
+                        <div class="stat-item"><span class="stat-val" id="stat-wpm">0</span><span class="stat-label">WPM</span></div>
+                        <div class="divider"></div>
+                        <div class="stat-item"><span class="stat-val" id="stat-words">0</span><span class="stat-label">Words</span></div>
+                        <div class="divider"></div>
+                        <div class="stat-item"><span class="stat-val" id="stat-read">0m</span><span class="stat-label">Read</span></div>
+                    </div>
+                </div>
+                <div class="editor-workspace">
+                    <div class="paper">
+                        <input type="text" id="doc-title" placeholder="Note Title" oninput="saveCurrentDocHeader()">
+                        <input type="text" id="doc-desc" placeholder="Short description..." oninput="saveCurrentDocHeader()">
+                        <div id="editor-content" contenteditable="true" spellcheck="false"></div>
+                    </div>
+                </div>
             </div>
-          </div>
         </div>
-      </div>
+    </div>
 
-      <!-- EDITOR OVERLAY (slides up from bottom of viewport) -->
-      <div id="view-editor">
-        <div class="editor-toolbar">
-          <button class="icon-btn" onclick="atl_closeEditor()">
-            <span class="material-icons" style="font-size:16px;">keyboard_arrow_down</span> Minimize
-          </button>
-          <div class="divider"></div>
-          <span style="font-size:11px;color:var(--text-muted);">Color:</span>
-          <div class="color-picker" id="node-color-picker"></div>
-          <div class="divider"></div>
-          <button class="icon-btn" onclick="atl_fmt('bold')"><span class="material-icons" style="font-size:16px;">format_bold</span></button>
-          <button class="icon-btn" onclick="atl_fmt('italic')"><span class="material-icons" style="font-size:16px;">format_italic</span></button>
-          <div class="divider"></div>
-          <select onchange="atl_fmt('fontName',this.value)" style="height:26px;font-size:12px;">
-            <option value="Crimson Pro">Medical</option>
-            <option value="Lato">Modern</option>
-            <option value="Roboto Mono">Code</option>
-          </select>
-          <div class="editor-stats">
-            <div class="stat-item" title="Words Per Minute">
-              <span class="stat-val" id="stat-wpm">0</span>
-              <span class="stat-label">WPM</span>
-            </div>
-            <div class="divider"></div>
-            <div class="stat-item" title="Words">
-              <span class="stat-val" id="stat-words">0</span>
-              <span class="stat-label">Words</span>
-            </div>
-            <div class="divider"></div>
-            <div class="stat-item" title="Reading Time">
-              <span class="stat-val" id="stat-read">0m</span>
-              <span class="stat-label">Read</span>
-            </div>
-          </div>
-        </div>
-        <div class="editor-workspace">
-          <div class="paper">
-            <input type="text" id="doc-title" placeholder="Note Title" oninput="atl_saveDocHeader()">
-            <input type="text" id="doc-desc"  placeholder="Short description..." oninput="atl_saveDocHeader()">
-            <div id="editor-content" contenteditable="true" spellcheck="false"></div>
-          </div>
-        </div>
-      </div>
+</section>
 
-    </div><!-- /viewport-container -->
-  </div><!-- /screen-workspace -->
-</div><!-- /atlas-root -->
-
-
-<!-- ═══════════════════════════════════════════════════════
-     JAVASCRIPT  — fully namespaced IIFE
-     All onclick="atl_*()" functions exposed on window.
-═══════════════════════════════════════════════════════ -->
 <script>
-(function () {
-  'use strict';
+// Original JS — only changes: window.onload→init(), .view-tab queries scoped to #atlas-root
+var app={modules:[]},currentModId=null,currentNoteId=null,drawMode=false,isPreviewMode=false;
+var sessionStartTime=0,sessionStartWords=0,painting=false,canvasHistory=[],historyStep=-1,snapshot=null;
+var canvas,ctx,startX,startY,dicePool=[],isRolling=false,globalDiceMode='norm';
+var dragId=null,dragOff={x:0,y:0},didDrag=false;
+const COLORS=['#ffb7b2','#ffdac1','#e2f0cb','#b5ead7','#c7ceea','#e1bee7'];
 
-  // ── State ───────────────────────────────────────────────
-  var app          = { modules: [] };
-  var currentModId = null;
-  var currentNoteId= null;
-  var drawMode     = false;
-  var isPreviewMode= false;
-
-  // Typing stats
-  var sessionStartTime  = 0;
-  var sessionStartWords = 0;
-
-  // Canvas
-  var canvas, ctx;
-  var painting      = false;
-  var canvasHistory = [];
-  var historyStep   = -1;
-  var snapshot      = null;
-  var startX, startY;
-
-  // Drag
-  var dragId  = null;
-  var dragOff = { x:0, y:0 };
-  var didDrag = false;
-
-  // Dice
-  var dicePool       = [];
-  var isRolling      = false;
-  var globalDiceMode = 'norm';
-
-  var COLORS = ['#ffb7b2','#ffdac1','#e2f0cb','#b5ead7','#c7ceea','#e1bee7'];
-
-  // ── Persistence ─────────────────────────────────────────
-  function saveApp() {
-    localStorage.setItem('atlas_v3', JSON.stringify(app));
-  }
-  function getMod() {
-    return app.modules.find(function(m){ return m.id === currentModId; });
-  }
-
-  // ── Init ────────────────────────────────────────────────
-  function init() {
-    var stored = localStorage.getItem('atlas_v3');
-    if (stored) try { app = JSON.parse(stored); } catch(e){}
+function init(){
+    const stored=localStorage.getItem('atlas_v3');
+    if(stored) app=JSON.parse(stored);
     renderModuleList();
-
-    var editor = document.getElementById('editor-content');
-    if (!editor) return;
-
-    editor.addEventListener('focus', function(){
-      var note = getMod() && getMod().notes.find(function(n){ return n.id===currentNoteId; });
-      sessionStartTime  = Date.now();
-      sessionStartWords = countWords(editor.innerText);
-      if (isPreviewMode && note) { editor.innerHTML = note.html; isPreviewMode = false; }
+    const editor=document.getElementById('editor-content');
+    editor.addEventListener('focus',()=>{
+        const note=getMod()&&getMod().notes.find(n=>n.id===currentNoteId);
+        sessionStartTime=Date.now(); sessionStartWords=countWords(editor.innerText);
+        if(isPreviewMode&&note){editor.innerHTML=note.html;isPreviewMode=false;}
     });
-    editor.addEventListener('input', function(){
-      var note = getMod() && getMod().notes.find(function(n){ return n.id===currentNoteId; });
-      if (!isPreviewMode && note) note.html = editor.innerHTML;
-      updateStats();
+    editor.addEventListener('input',()=>{
+        const note=getMod()&&getMod().notes.find(n=>n.id===currentNoteId);
+        if(!isPreviewMode&&note) note.html=editor.innerHTML;
+        updateStats();
     });
-    editor.addEventListener('blur', function(){ saveDocBody(); renderLatexAndLinks(); });
+    editor.addEventListener('blur',()=>{saveCurrentDocBody();renderLatexAndLinks();});
+    document.getElementById('map-text-input').addEventListener('keydown',e=>{if(e.key==='Enter')commitTextToCanvas();});
+    document.getElementById('map-text-input').addEventListener('blur',commitTextToCanvas);
+    // Canvas events scoped to atlas-root so they don't fight UniDash
+    const root=document.getElementById('atlas-root');
+    root.addEventListener('mousedown',e=>{
+        if(!drawMode||e.target!==canvas)return;
+        const c=getCanvasCoords(e); startX=c.x; startY=c.y;
+        const type=document.getElementById('brush-type').value;
+        if(type==='text'){commitTextToCanvas();const inp=document.getElementById('map-text-input');inp.style.display='block';inp.style.left=e.clientX+'px';inp.style.top=e.clientY+'px';inp.style.color=document.getElementById('brush-color').value;inp.value='';inp.focus();return;}
+        if(type==='fill'){floodFill(c.x,c.y,ctx.fillStyle);saveState();return;}
+        painting=true; snapshot=ctx.getImageData(0,0,canvas.width,canvas.height);
+        if(type==='pen'||type==='marker'||type==='eraser'){ctx.beginPath();ctx.moveTo(c.x,c.y);}
+    });
+    window.addEventListener('mouseup',()=>{if(painting){painting=false;ctx.beginPath();saveState();}});
+    root.addEventListener('mousemove',e=>{
+        if(!painting||!drawMode)return;
+        const c=getCanvasCoords(e),type=document.getElementById('brush-type').value;
+        if(type==='pen'||type==='marker'||type==='eraser'){ctx.lineTo(c.x,c.y);ctx.stroke();}
+        else if(type==='spray'){const sz=document.getElementById('brush-size').value*2;for(let i=0;i<10;i++)ctx.fillRect(c.x+(Math.random()-.5)*sz*2,c.y+(Math.random()-.5)*sz*2,1,1);}
+        else if(type==='rect'){ctx.putImageData(snapshot,0,0);ctx.strokeRect(startX,startY,c.x-startX,c.y-startY);}
+        else if(type==='circle'){ctx.putImageData(snapshot,0,0);ctx.beginPath();ctx.arc(startX,startY,Math.hypot(c.x-startX,c.y-startY),0,2*Math.PI);ctx.stroke();}
+    });
+}
 
-    var textInput = document.getElementById('map-text-input');
-    if (textInput) {
-      textInput.addEventListener('keydown', function(e){ if(e.key==='Enter') commitText(); });
-      textInput.addEventListener('blur',    commitText);
-    }
+function saveApp(){localStorage.setItem('atlas_v3',JSON.stringify(app));}
+function getMod(){return app.modules.find(m=>m.id===currentModId);}
 
-    // Canvas mouse events — bound once, scoped to atlas canvas
-    var root = document.getElementById('atlas-root');
-    root.addEventListener('mousedown', onRootMouseDown);
-    window.addEventListener('mouseup',   onWindowMouseUp);
-    root.addEventListener('mousemove',   onRootMouseMove);
-  }
-
-  // ── View switching ───────────────────────────────────────
-  window.atl_switchView = function(name) {
+function switchMainView(viewName){
     document.getElementById('view-map').classList.remove('active');
     document.getElementById('view-dice').classList.remove('active');
-    document.querySelectorAll('#atlas-root .view-tab').forEach(function(t){ t.classList.remove('active'); });
-    if (name === 'map') {
-      document.getElementById('view-map').classList.add('active');
-      document.querySelectorAll('#atlas-root .view-tab')[0].classList.add('active');
-      setTimeout(initCanvas, 10);
-    } else {
-      document.getElementById('view-dice').classList.add('active');
-      document.querySelectorAll('#atlas-root .view-tab')[1].classList.add('active');
-    }
-  };
+    document.querySelectorAll('#atlas-root .view-tab').forEach(t=>t.classList.remove('active'));
+    if(viewName==='map'){document.getElementById('view-map').classList.add('active');document.querySelectorAll('#atlas-root .view-tab')[0].classList.add('active');setTimeout(initCanvas,10);}
+    else{document.getElementById('view-dice').classList.add('active');document.querySelectorAll('#atlas-root .view-tab')[1].classList.add('active');}
+}
 
-  // ── Module CRUD ──────────────────────────────────────────
-  function renderModuleList() {
-    var list = document.getElementById('module-list-container');
-    if (!list) return;
-    list.innerHTML = '';
-    app.modules.forEach(function(m) {
-      var div = document.createElement('div');
-      div.className = 'module-item';
-      div.innerHTML =
-        '<div style="flex-grow:1;cursor:pointer;" onclick="atl_openModule(\''+m.id+'\')">' +
-          '<strong style="font-family:var(--font-doc);font-size:1.2em;">'+esc(m.name)+'</strong>' +
-          '<div style="font-size:11px;color:var(--text-muted);margin-top:3px;">'+m.notes.length+' notes</div>' +
-        '</div>' +
-        '<button class="icon-btn" style="color:var(--danger);" onclick="atl_deleteModule(\''+m.id+'\')">' +
-          '<span class="material-icons" style="font-size:18px;">delete</span>' +
-        '</button>';
-      list.appendChild(div);
-    });
-  }
-
-  window.atl_createModule = function() {
-    var name = document.getElementById('new-module-name').value.trim();
-    if (!name) return;
-    app.modules.push({ id: Date.now().toString(), name:name, notes:[], wb:null });
-    saveApp(); renderModuleList();
-    document.getElementById('new-module-name').value = '';
-  };
-
-  window.atl_deleteModule = function(id) {
-    if (!confirm('Delete this Atlas?')) return;
-    app.modules = app.modules.filter(function(m){ return m.id!==id; });
-    saveApp(); renderModuleList();
-  };
-
-  window.atl_openModule = function(id) {
-    currentModId = id;
-    document.getElementById('screen-modules').classList.remove('active');
-    document.getElementById('screen-workspace').classList.add('active');
-    document.getElementById('current-module-title').innerText = getMod().name;
-    initCanvas();
-    renderSidebar();
-    renderMap();
-    atl_switchView('map');
-  };
-
-  window.atl_saveAndExit = function() {
-    if (document.getElementById('view-map').classList.contains('active')) saveWhiteboard();
-    saveApp();
-    currentModId = null; currentNoteId = null;
-    document.getElementById('screen-workspace').classList.remove('active');
-    document.getElementById('screen-modules').classList.add('active');
-    renderModuleList();
-  };
-
-  // ── Sidebar / Notes ──────────────────────────────────────
-  function renderSidebar() {
-    var list = document.getElementById('sidebar-notes');
-    if (!list) return;
-    list.innerHTML = '';
-    var notes = getMod().notes.slice().sort(function(a,b){ return a.num-b.num; });
-    notes.forEach(function(n) {
-      var el = document.createElement('div');
-      el.className = 'sidebar-note-item' + (currentNoteId===n.id ? ' active' : '');
-      el.style.borderLeftColor = n.color;
-      el.onclick = function(){ openNoteInEditor(n.id); };
-      el.innerHTML =
-        '<span class="sb-title">#'+n.num+' '+esc(n.title)+'</span>' +
-        '<span class="sb-desc">'+(n.desc?esc(n.desc):'No description')+'</span>';
-      list.appendChild(el);
-    });
-  }
-
-  window.atl_createNote = function() {
-    var mod = getMod();
-    var max = mod.notes.reduce(function(a,n){ return Math.max(a,n.num); }, 0);
-    mod.notes.push({
-      id: Date.now().toString(), num:max+1,
-      title:'Topic '+(max+1), desc:'', html:'',
-      x: 80+Math.random()*120, y: 80+Math.random()*120,
-      color: COLORS[Math.floor(Math.random()*COLORS.length)]
-    });
-    saveApp(); renderSidebar(); renderMap();
-  };
-
-  // ── Editor ───────────────────────────────────────────────
-  function openNoteInEditor(id) {
-    currentNoteId = id;
-    var note = getMod().notes.find(function(n){ return n.id===id; });
-    document.getElementById('view-editor').classList.add('active');
-    document.getElementById('doc-title').value = note.title;
-    document.getElementById('doc-desc').value  = note.desc || '';
-    renderColorPicker();
-    renderSidebar();
-    document.getElementById('editor-content').innerHTML = note.html || 'Start typing…';
-    renderLatexAndLinks();
-    updateStats();
-  }
-
-  window.atl_closeEditor = function() {
-    saveDocBody();
-    currentNoteId = null;
-    document.getElementById('view-editor').classList.remove('active');
-    renderSidebar();
-    if (document.getElementById('view-map').classList.contains('active')) renderMap();
-  };
-
-  function renderColorPicker() {
-    var cont = document.getElementById('node-color-picker');
-    if (!cont) return;
-    cont.innerHTML = '';
-    var note = getMod().notes.find(function(n){ return n.id===currentNoteId; });
-    COLORS.forEach(function(color) {
-      var d = document.createElement('div');
-      d.className = 'color-option' + (note.color===color ? ' active' : '');
-      d.style.backgroundColor = color;
-      d.onclick = function(){ note.color=color; saveApp(); renderColorPicker(); renderSidebar(); };
-      cont.appendChild(d);
-    });
-  }
-
-  window.atl_saveDocHeader = function() {
-    if (!currentNoteId) return;
-    var note = getMod().notes.find(function(n){ return n.id===currentNoteId; });
-    note.title = document.getElementById('doc-title').value;
-    note.desc  = document.getElementById('doc-desc').value;
-    saveApp();
-  };
-
-  function saveDocBody() {
-    if (!currentNoteId || isPreviewMode) return;
-    var note = getMod().notes.find(function(n){ return n.id===currentNoteId; });
-    if (note) { note.html = document.getElementById('editor-content').innerHTML; saveApp(); }
-  }
-
-  window.atl_fmt = function(cmd, val) {
-    document.execCommand(cmd, false, val||null);
-    document.getElementById('editor-content').focus();
-  };
-
-  function renderLatexAndLinks() {
-    var editor = document.getElementById('editor-content');
-    var note   = getMod() && getMod().notes.find(function(n){ return n.id===currentNoteId; });
-    if (!note) return;
-    var content = note.html;
-    content = content.replace(/(?<!\$)\$(\d+)(?!\$)/g, function(match, num){
-      var target = getMod().notes.find(function(n){ return n.num==num; });
-      if (target) return '<span class="smart-link" onclick="atl_jumpToNote(\''+target.id+'\')">&nbsp;'+esc(target.title)+'&nbsp;</span>';
-      return match;
-    });
-    editor.innerHTML = content;
-    if (window.MathJax && MathJax.typesetPromise) MathJax.typesetPromise([editor]);
-    isPreviewMode = true;
-  }
-
-  window.atl_jumpToNote = function(targetId) {
-    if (!isPreviewMode) saveDocBody();
-    openNoteInEditor(targetId);
-  };
-
-  // ── Typing stats ─────────────────────────────────────────
-  function countWords(str){ return str.trim().split(/\s+/).filter(function(w){ return w.length>0; }).length; }
-  function updateStats() {
-    var text = document.getElementById('editor-content').innerText;
-    var words = countWords(text);
-    document.getElementById('stat-words').innerText = words;
-    document.getElementById('stat-read').innerText  = Math.ceil(words/200)+'m';
-    var mins = (Date.now()-sessionStartTime)/60000;
-    if (mins > 0.05) {
-      var wpm = Math.round(Math.max(0, words-sessionStartWords)/mins);
-      document.getElementById('stat-wpm').innerText = wpm||0;
-    }
-  }
-
-  // ── Map / node engine ────────────────────────────────────
-  function renderMap() {
-    var nodeLayer = document.getElementById('layer-nodes');
-    if (!nodeLayer) return;
-    nodeLayer.innerHTML = '';
-    getMod().notes.forEach(function(n) {
-      var el = document.createElement('div');
-      el.className = 'map-node';
-      el.style.left = n.x+'px'; el.style.top = n.y+'px';
-      el.style.backgroundColor = n.color;
-      el.innerText = n.num;
-      el.title = n.title;
-      el.onmousedown = function(e){ startDrag(e, n.id); };
-      nodeLayer.appendChild(el);
-    });
-
-    var svg = document.getElementById('layer-connections');
-    svg.innerHTML = '';
-    var regex = /(?<!\$)\$(\d+)(?!\$)/g;
-    getMod().notes.forEach(function(src) {
-      if (!src.html) return;
-      var matches = Array.from(src.html.matchAll(regex));
-      matches.forEach(function(m){
-        var target = getMod().notes.find(function(n){ return n.num==parseInt(m[1]); });
-        if (target && target.id!==src.id) {
-          var line = document.createElementNS('http://www.w3.org/2000/svg','line');
-          line.setAttribute('x1',src.x+22); line.setAttribute('y1',src.y+22);
-          line.setAttribute('x2',target.x+22); line.setAttribute('y2',target.y+22);
-          line.setAttribute('class','connection-line');
-          svg.appendChild(line);
-        }
-      });
-    });
-  }
-
-  function startDrag(e, id) {
-    if (drawMode) return;
-    e.stopPropagation();
-    dragId = id; didDrag = false;
-    var n = getMod().notes.find(function(x){ return x.id===id; });
-    dragOff = { x: e.clientX-n.x, y: e.clientY-n.y };
-    window.addEventListener('mousemove', onNodeDrag);
-    window.addEventListener('mouseup',   onNodeDrop);
-  }
-  function onNodeDrag(e) {
-    if (!dragId) return;
-    didDrag = true;
-    var n = getMod().notes.find(function(x){ return x.id===dragId; });
-    n.x = e.clientX-dragOff.x; n.y = e.clientY-dragOff.y;
-    renderMap();
-  }
-  function onNodeDrop() {
-    if (dragId && !didDrag) openNoteInEditor(dragId);
-    if (dragId) saveApp();
-    dragId = null;
-    window.removeEventListener('mousemove', onNodeDrag);
-    window.removeEventListener('mouseup',   onNodeDrop);
-  }
-
-  // ── Whiteboard ───────────────────────────────────────────
-  function initCanvas() {
-    canvas = document.getElementById('layer-whiteboard');
-    if (!canvas) return;
-    ctx = canvas.getContext('2d', { willReadFrequently:true });
-    var parent = document.getElementById('view-map');
-    canvas.width  = parent.clientWidth;
-    canvas.height = parent.clientHeight;
-    ctx.clearRect(0,0,canvas.width,canvas.height);
-    var mod = getMod();
-    if (mod && mod.wb) {
-      var img = new Image();
-      img.onload = function(){ ctx.drawImage(img,0,0); saveState(); };
-      img.src = mod.wb;
-    } else { saveState(); }
-    atl_updateBrush();
-  }
-
-  window.atl_toggleDrawMode = function() {
-    drawMode = !drawMode;
-    document.getElementById('btn-draw-mode').classList.toggle('active', drawMode);
-    document.getElementById('draw-tools').classList.toggle('hidden', !drawMode);
-    var nodes = document.getElementById('layer-nodes');
-    if (drawMode) {
-      canvas.style.pointerEvents='auto'; canvas.style.cursor='crosshair';
-      nodes.style.pointerEvents='none';
-    } else {
-      canvas.style.pointerEvents='none'; canvas.style.cursor='';
-      nodes.style.pointerEvents='auto';
-      document.getElementById('map-text-input').style.display='none';
-      saveWhiteboard();
-    }
-  };
-
-  window.atl_updateBrush = function() {
-    if (!ctx) return;
-    var color = document.getElementById('brush-color').value;
-    var type  = document.getElementById('brush-type').value;
-    var size  = document.getElementById('brush-size').value;
-    ctx.lineWidth=size; ctx.lineJoin='round'; ctx.lineCap='round';
-    ctx.globalCompositeOperation='source-over';
-    if (type==='eraser') { ctx.globalCompositeOperation='destination-out'; }
-    else if (type==='marker') {
-      var r=parseInt(color.substr(1,2),16), g=parseInt(color.substr(3,2),16), b=parseInt(color.substr(5,2),16);
-      var rgba='rgba('+r+','+g+','+b+',0.4)';
-      ctx.strokeStyle=rgba; ctx.fillStyle=rgba; ctx.lineWidth=size*3; ctx.lineCap='square';
-    } else { ctx.strokeStyle=color; ctx.fillStyle=color; }
-  };
-
-  function saveState() {
-    historyStep++;
-    if (historyStep<canvasHistory.length) canvasHistory.length=historyStep;
-    canvasHistory.push(canvas.toDataURL());
-    if (canvasHistory.length>10){ canvasHistory.shift(); historyStep--; }
-  }
-
-  window.atl_undo = function() {
-    if (historyStep>0) {
-      historyStep--;
-      var img=new Image(); img.src=canvasHistory[historyStep];
-      img.onload=function(){ ctx.clearRect(0,0,canvas.width,canvas.height); ctx.drawImage(img,0,0); };
-    }
-  };
-
-  function saveWhiteboard() {
-    if (currentModId) { getMod().wb=canvas.toDataURL(); saveApp(); }
-  }
-
-  window.atl_clearWhiteboard = function() {
-    if (confirm('Clear drawing?')){ ctx.clearRect(0,0,canvas.width,canvas.height); saveState(); saveWhiteboard(); }
-  };
-
-  function getCoords(e) {
-    var rect=canvas.getBoundingClientRect();
-    return { x:e.clientX-rect.left, y:e.clientY-rect.top };
-  }
-
-  function commitText() {
-    var input=document.getElementById('map-text-input');
-    if (input.style.display==='none'||!input.value){ input.style.display='none'; return; }
-    var rect=canvas.getBoundingClientRect();
-    var x=parseInt(input.style.left)-rect.left;
-    var y=parseInt(input.style.top)-rect.top+18;
-    ctx.font="20px 'Crimson Pro'";
-    ctx.fillStyle=input.style.color||'#80cbc4';
-    ctx.fillText(input.value,x,y);
-    input.value=''; input.style.display='none';
-    atl_updateBrush(); saveState();
-  }
-
-  // Canvas events — scoped to atlas root
-  function onRootMouseDown(e) {
-    if (!drawMode || e.target!==canvas) return;
-    var coords=getCoords(e), type=document.getElementById('brush-type').value;
-    startX=coords.x; startY=coords.y;
-    if (type==='text') {
-      commitText();
-      var input=document.getElementById('map-text-input');
-      input.style.display='block';
-      input.style.left=e.clientX+'px'; input.style.top=e.clientY+'px';
-      input.style.color=document.getElementById('brush-color').value;
-      input.value=''; input.focus(); return;
-    }
-    if (type==='fill'){ floodFill(coords.x,coords.y,ctx.fillStyle); saveState(); return; }
-    painting=true;
-    snapshot=ctx.getImageData(0,0,canvas.width,canvas.height);
-    if (type==='pen'||type==='marker'||type==='eraser'){ ctx.beginPath(); ctx.moveTo(coords.x,coords.y); }
-  }
-
-  function onWindowMouseUp() {
-    if (painting){ painting=false; ctx.beginPath(); saveState(); }
-  }
-
-  function onRootMouseMove(e) {
-    if (!painting||!drawMode||!canvas) return;
-    var coords=getCoords(e), type=document.getElementById('brush-type').value;
-    if (type==='pen'||type==='marker'||type==='eraser'){
-      ctx.lineTo(coords.x,coords.y); ctx.stroke();
-    } else if (type==='spray'){
-      var sz=document.getElementById('brush-size').value*2;
-      for(var i=0;i<10;i++) ctx.fillRect(coords.x+(Math.random()-.5)*sz*2, coords.y+(Math.random()-.5)*sz*2,1,1);
-    } else if (type==='rect'){
-      ctx.putImageData(snapshot,0,0);
-      ctx.strokeRect(startX,startY,coords.x-startX,coords.y-startY);
-    } else if (type==='circle'){
-      ctx.putImageData(snapshot,0,0); ctx.beginPath();
-      ctx.arc(startX,startY,Math.hypot(coords.x-startX,coords.y-startY),0,2*Math.PI); ctx.stroke();
-    }
-  }
-
-  function floodFill(sx,sy,fillColorStr) {
-    var d=document.createElement('div'); d.style.color=fillColorStr; document.body.appendChild(d);
-    var col=window.getComputedStyle(d).color.match(/\d+/g).map(Number); document.body.removeChild(d);
-    var fR=col[0],fG=col[1],fB=col[2];
-    var pd=ctx.getImageData(0,0,canvas.width,canvas.height), data=pd.data;
-    var sp=(Math.floor(sy)*canvas.width+Math.floor(sx))*4;
-    var sR=data[sp],sG=data[sp+1],sB=data[sp+2];
-    if(sR===fR&&sG===fG&&sB===fB)return;
-    var stack=[[Math.floor(sx),Math.floor(sy)]];
-    while(stack.length){
-      var pt=stack.pop(), x=pt[0], y=pt[1];
-      if(x<0||x>=canvas.width||y<0||y>=canvas.height)continue;
-      var pos=(y*canvas.width+x)*4;
-      if(Math.abs(data[pos]-sR)>10||Math.abs(data[pos+1]-sG)>10||Math.abs(data[pos+2]-sB)>10)continue;
-      data[pos]=fR;data[pos+1]=fG;data[pos+2]=fB;data[pos+3]=255;
-      stack.push([x+1,y],[x-1,y],[x,y+1],[x,y-1]);
-    }
-    ctx.putImageData(pd,0,0);
-  }
-
-  // ── Dice ─────────────────────────────────────────────────
-  window.atl_addDie = function(sides) {
-    if (isRolling) return;
-    dicePool.push({ id:Date.now()+Math.random(), sides:sides, value:sides, state:globalDiceMode });
-    renderTray(); atl_calculateAverage();
-  };
-
-  window.atl_addCustomDie = function() {
-    var s=parseInt(prompt('Number of sides (1-999):'));
-    if (s&&s>0) atl_addDie(s);
-  };
-
-  function removeDie(id) {
-    dicePool=dicePool.filter(function(d){ return d.id!==id; });
-    renderTray(); atl_calculateAverage();
-  }
-
-  function toggleDieState(id) {
-    if (isRolling) return;
-    var die=dicePool.find(function(d){ return d.id===id; });
-    if (!die) return;
-    die.state = die.state==='norm'?'adv': die.state==='adv'?'dis':'norm';
-    renderTray(); atl_calculateAverage();
-  }
-
-  window.atl_setGlobalMode = function(mode) {
-    globalDiceMode=mode;
-    document.querySelectorAll('#atlas-root .adv-btn').forEach(function(b){ b.classList.remove('active'); });
-    document.querySelector('#atlas-root .adv-btn[data-mode="'+mode+'"]').classList.add('active');
-  };
-
-  window.atl_clearTray = function() {
-    if (isRolling) return;
-    dicePool=[]; renderTray();
-    document.getElementById('dice-total-display').innerText='—';
-    atl_calculateAverage();
-  };
-
-  function renderTray() {
-    var tray=document.getElementById('dice-tray-content');
-    if (!tray) return;
-    if (!dicePool.length){
-      tray.innerHTML='<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-style:italic;font-size:13px;">Add dice — click to toggle Adv/Dis, right-click to remove.</div>';
-      return;
-    }
+function addDie(sides){if(isRolling)return;dicePool.push({id:Date.now()+Math.random(),sides,value:sides,state:globalDiceMode});renderTray();calculateAverage();}
+function addCustomDie(){const s=parseInt(prompt('Sides (1-999):'));if(s&&s>0)addDie(s);}
+function removeDie(id){dicePool=dicePool.filter(d=>d.id!==id);renderTray();calculateAverage();}
+function toggleDieState(id){if(isRolling)return;const die=dicePool.find(d=>d.id===id);if(!die)return;die.state=die.state==='norm'?'adv':die.state==='adv'?'dis':'norm';renderTray();calculateAverage();}
+function setGlobalMode(mode){globalDiceMode=mode;document.querySelectorAll('#atlas-root .adv-btn').forEach(b=>b.classList.remove('active'));document.querySelector(`#atlas-root .adv-btn[data-mode="${mode}"]`).classList.add('active');}
+function clearTray(){if(isRolling)return;dicePool=[];renderTray();document.getElementById('dice-total-display').innerText='0';calculateAverage();}
+function renderTray(){
+    const tray=document.getElementById('dice-tray-content');
+    if(!dicePool.length){tray.innerHTML='<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-style:italic;font-size:13px;">Add dice... Click die to toggle Adv/Dis independently.</div>';return;}
     tray.innerHTML='';
-    dicePool.forEach(function(die){
-      var el=document.createElement('div');
-      el.className='tray-die';
-      el.setAttribute('data-type','d'+die.sides);
-      el.setAttribute('data-state',die.state);
-      el.id='die-'+die.id;
-      el.innerText=die.value;
-      el.onclick=function(){ toggleDieState(die.id); };
-      el.oncontextmenu=function(e){ e.preventDefault(); removeDie(die.id); return false; };
-      tray.appendChild(el);
-    });
-  }
+    dicePool.forEach(die=>{const el=document.createElement('div');el.className='tray-die';el.setAttribute('data-type','d'+die.sides);el.setAttribute('data-state',die.state);el.id='die-'+die.id;el.innerText=die.value;el.onclick=()=>toggleDieState(die.id);el.oncontextmenu=e=>{e.preventDefault();removeDie(die.id);return false;};tray.appendChild(el);});
+}
+function calculateAverage(){let sum=0;dicePool.forEach(d=>{const n=d.sides,b=(n+1)/2,sh=(n*n-1)/(6*n);sum+=d.state==='adv'?b+sh:d.state==='dis'?b-sh:b;});const mod=parseInt(document.getElementById('dice-modifier').value)||0;document.getElementById('dice-avg-display').innerText=`Exp. Avg: ${(sum+mod).toFixed(2)}`;}
+function rollAllDice(){
+    if(!dicePool.length||isRolling)return;isRolling=true;
+    const modifier=parseInt(document.getElementById('dice-modifier').value)||0;
+    dicePool.forEach(d=>{const el=document.getElementById('die-'+d.id);if(el)el.classList.remove('crit-anim');});
+    let ticks=0;const interval=setInterval(()=>{ticks++;dicePool.forEach(die=>{const el=document.getElementById('die-'+die.id);if(el){el.innerText=Math.floor(Math.random()*die.sides)+1;el.classList.add('rolling');}});if(ticks>15){clearInterval(interval);finalizeRoll(modifier);}},80);
+}
+function finalizeRoll(modifier){
+    let total=0;
+    dicePool.forEach(die=>{const r1=Math.floor(Math.random()*die.sides)+1,r2=Math.floor(Math.random()*die.sides)+1;const v=die.state==='adv'?Math.max(r1,r2):die.state==='dis'?Math.min(r1,r2):r1;die.value=v;total+=v;const el=document.getElementById('die-'+die.id);if(el){el.innerText=v;el.classList.remove('rolling');if(v===die.sides)el.classList.add('crit-anim');}});
+    const ft=total+modifier;document.getElementById('dice-total-display').innerText=`${total} (${modifier>=0?'+':''}${modifier}) = ${ft}`;isRolling=false;
+}
+function countWords(str){return str.trim().split(/\s+/).filter(w=>w.length>0).length;}
+function updateStats(){const text=document.getElementById('editor-content').innerText,w=countWords(text);document.getElementById('stat-words').innerText=w;document.getElementById('stat-read').innerText=Math.ceil(w/200)+'m';const mins=(Date.now()-sessionStartTime)/60000;if(mins>0.05)document.getElementById('stat-wpm').innerText=Math.round(Math.max(0,w-sessionStartWords)/mins)||0;}
+function renderModuleList(){const list=document.getElementById('module-list-container');list.innerHTML='';app.modules.forEach(m=>{const div=document.createElement('div');div.className='module-item';div.innerHTML=`<div style="flex-grow:1;cursor:pointer;" onclick="openModule('${m.id}')"><strong style="font-family:var(--font-doc);font-size:1.2em;">${m.name}</strong><div style="font-size:0.8em;color:var(--text-muted);margin-top:3px;">${m.notes.length} Notes</div></div><button class="icon-btn" style="color:var(--danger);" onclick="deleteModule('${m.id}')"><span class="material-icons">delete</span></button>`;list.appendChild(div);});}
+function createModule(){const name=document.getElementById('new-module-name').value.trim();if(!name)return;app.modules.push({id:Date.now().toString(),name,notes:[],wb:null});saveApp();renderModuleList();document.getElementById('new-module-name').value='';}
+function deleteModule(id){if(!confirm('Delete?'))return;app.modules=app.modules.filter(m=>m.id!==id);saveApp();renderModuleList();}
+function openModule(id){currentModId=id;document.getElementById('screen-modules').classList.remove('active');document.getElementById('screen-workspace').classList.add('active');document.getElementById('current-module-title').innerText=getMod().name;initCanvas();renderSidebar();renderMap();switchMainView('map');}
+function saveAndExit(){if(document.getElementById('view-map').classList.contains('active'))saveWhiteboard();saveApp();currentModId=null;document.getElementById('screen-workspace').classList.remove('active');document.getElementById('screen-modules').classList.add('active');renderModuleList();}
+function renderSidebar(){const list=document.getElementById('sidebar-notes');list.innerHTML='';getMod().notes.sort((a,b)=>a.num-b.num).forEach(n=>{const el=document.createElement('div');el.className=`sidebar-note-item ${currentNoteId===n.id?'active':''}`;el.style.borderLeftColor=n.color;el.onclick=()=>openNoteInEditor(n.id);el.innerHTML=`<span class="sb-title">#${n.num} ${n.title}</span><span class="sb-desc">${n.desc||'No description'}</span>`;list.appendChild(el);});}
+function createNote(){const mod=getMod(),max=mod.notes.reduce((a,n)=>Math.max(a,n.num),0);mod.notes.push({id:Date.now().toString(),num:max+1,title:`Topic ${max+1}`,desc:'',html:'',x:80+Math.random()*120,y:80+Math.random()*120,color:COLORS[Math.floor(Math.random()*COLORS.length)]});saveApp();renderSidebar();renderMap();}
+function openNoteInEditor(id){currentNoteId=id;const note=getMod().notes.find(n=>n.id===id);document.getElementById('view-editor').classList.add('active');document.getElementById('doc-title').value=note.title;document.getElementById('doc-desc').value=note.desc||'';renderColorPicker();renderSidebar();document.getElementById('editor-content').innerHTML=note.html||'Start typing...';renderLatexAndLinks();updateStats();}
+function closeEditor(){saveCurrentDocBody();currentNoteId=null;document.getElementById('view-editor').classList.remove('active');renderSidebar();if(document.getElementById('view-map').classList.contains('active'))renderMap();}
+function renderColorPicker(){const cont=document.getElementById('node-color-picker');cont.innerHTML='';const note=getMod().notes.find(n=>n.id===currentNoteId);COLORS.forEach(color=>{const d=document.createElement('div');d.className=`color-option ${note.color===color?'active':''}`;d.style.backgroundColor=color;d.onclick=()=>{note.color=color;saveApp();renderColorPicker();renderSidebar();};cont.appendChild(d);});}
+function saveCurrentDocHeader(){if(!currentNoteId)return;const note=getMod().notes.find(n=>n.id===currentNoteId);note.title=document.getElementById('doc-title').value;note.desc=document.getElementById('doc-desc').value;saveApp();}
+function saveCurrentDocBody(){if(!currentNoteId||isPreviewMode)return;const note=getMod().notes.find(n=>n.id===currentNoteId);if(note){note.html=document.getElementById('editor-content').innerHTML;saveApp();}}
+function formatDoc(cmd,value=null){document.execCommand(cmd,false,value);document.getElementById('editor-content').focus();}
+function renderLatexAndLinks(){const editor=document.getElementById('editor-content');const note=getMod()&&getMod().notes.find(n=>n.id===currentNoteId);if(!note)return;let content=note.html;content=content.replace(/(?<!\$)\$(\d+)(?!\$)/g,(match,num)=>{const target=getMod().notes.find(n=>n.num==num);if(target)return `<span class="smart-link" onclick="jumpToNote('${target.id}')">&nbsp;${target.title}&nbsp;</span>`;return match;});editor.innerHTML=content;if(window.MathJax&&MathJax.typesetPromise)MathJax.typesetPromise([editor]);isPreviewMode=true;}
+function jumpToNote(targetId){if(!isPreviewMode)saveCurrentDocBody();openNoteInEditor(targetId);}
+function renderMap(){const layer=document.getElementById('layer-nodes');layer.innerHTML='';getMod().notes.forEach(n=>{const el=document.createElement('div');el.className='map-node';el.style.left=n.x+'px';el.style.top=n.y+'px';el.style.backgroundColor=n.color;el.innerText=n.num;el.title=n.title;el.onmousedown=e=>startDrag(e,n.id);layer.appendChild(el);});const svg=document.getElementById('layer-connections');svg.innerHTML='';const regex=/(?<!\$)\$(\d+)(?!\$)/g;getMod().notes.forEach(src=>{if(!src.html)return;[...src.html.matchAll(regex)].forEach(m=>{const target=getMod().notes.find(n=>n.num===parseInt(m[1]));if(target&&target.id!==src.id){const line=document.createElementNS('http://www.w3.org/2000/svg','line');line.setAttribute('x1',src.x+22);line.setAttribute('y1',src.y+22);line.setAttribute('x2',target.x+22);line.setAttribute('y2',target.y+22);line.setAttribute('class','connection-line');svg.appendChild(line);}});});}
+function startDrag(e,id){if(drawMode)return;e.stopPropagation();dragId=id;didDrag=false;const n=getMod().notes.find(x=>x.id===id);dragOff={x:e.clientX-n.x,y:e.clientY-n.y};window.addEventListener('mousemove',onDrag);window.addEventListener('mouseup',stopDrag);}
+function onDrag(e){if(!dragId)return;didDrag=true;const n=getMod().notes.find(x=>x.id===dragId);n.x=e.clientX-dragOff.x;n.y=e.clientY-dragOff.y;renderMap();}
+function stopDrag(){if(dragId&&!didDrag)openNoteInEditor(dragId);if(dragId)saveApp();dragId=null;window.removeEventListener('mousemove',onDrag);window.removeEventListener('mouseup',stopDrag);}
+function initCanvas(){canvas=document.getElementById('layer-whiteboard');if(!canvas)return;ctx=canvas.getContext('2d',{willReadFrequently:true});const parent=document.getElementById('view-map');canvas.width=parent.clientWidth;canvas.height=parent.clientHeight;ctx.clearRect(0,0,canvas.width,canvas.height);const mod=getMod();if(mod&&mod.wb){const img=new Image();img.onload=()=>{ctx.drawImage(img,0,0);saveState();};img.src=mod.wb;}else saveState();updateBrush();}
+function toggleDrawMode(){drawMode=!drawMode;document.getElementById('btn-draw-mode').classList.toggle('active',drawMode);document.getElementById('draw-tools').classList.toggle('hidden',!drawMode);const nodes=document.getElementById('layer-nodes');if(drawMode){canvas.style.pointerEvents='auto';canvas.style.cursor='crosshair';nodes.style.pointerEvents='none';}else{canvas.style.pointerEvents='none';canvas.style.cursor='';nodes.style.pointerEvents='auto';document.getElementById('map-text-input').style.display='none';saveWhiteboard();}}
+function updateBrush(){if(!ctx)return;const color=document.getElementById('brush-color').value,type=document.getElementById('brush-type').value,size=document.getElementById('brush-size').value;ctx.lineWidth=size;ctx.lineJoin='round';ctx.lineCap='round';ctx.globalCompositeOperation='source-over';if(type==='eraser')ctx.globalCompositeOperation='destination-out';else if(type==='marker'){const r=parseInt(color.substr(1,2),16),g=parseInt(color.substr(3,2),16),b=parseInt(color.substr(5,2),16);const rgba=`rgba(${r},${g},${b},0.4)`;ctx.strokeStyle=rgba;ctx.fillStyle=rgba;ctx.lineWidth=size*3;ctx.lineCap='square';}else{ctx.strokeStyle=color;ctx.fillStyle=color;}}
+function saveState(){historyStep++;if(historyStep<canvasHistory.length)canvasHistory.length=historyStep;canvasHistory.push(canvas.toDataURL());if(canvasHistory.length>10){canvasHistory.shift();historyStep--;}}
+function undo(){if(historyStep>0){historyStep--;const img=new Image();img.src=canvasHistory[historyStep];img.onload=()=>{ctx.clearRect(0,0,canvas.width,canvas.height);ctx.drawImage(img,0,0);};}}
+function saveWhiteboard(){if(currentModId){getMod().wb=canvas.toDataURL();saveApp();}}
+function clearWhiteboard(){if(confirm('Clear drawing?')){ctx.clearRect(0,0,canvas.width,canvas.height);saveState();saveWhiteboard();}}
+function getCanvasCoords(e){const r=canvas.getBoundingClientRect();return{x:e.clientX-r.left,y:e.clientY-r.top};}
+function commitTextToCanvas(){const input=document.getElementById('map-text-input');if(input.style.display==='none'||!input.value){input.style.display='none';return;}const rect=canvas.getBoundingClientRect();ctx.font="20px 'Crimson Pro'";ctx.fillStyle=input.style.color||'#2c3e50';ctx.fillText(input.value,parseInt(input.style.left)-rect.left,parseInt(input.style.top)-rect.top+18);input.value='';input.style.display='none';updateBrush();saveState();}
+function floodFill(sx,sy,fillColorStr){const d=document.createElement('div');d.style.color=fillColorStr;document.body.appendChild(d);const col=window.getComputedStyle(d).color.match(/\d+/g).map(Number);document.body.removeChild(d);const[fR,fG,fB]=col;const pd=ctx.getImageData(0,0,canvas.width,canvas.height),data=pd.data;const sp=(Math.floor(sy)*canvas.width+Math.floor(sx))*4;const[sR,sG,sB]=[data[sp],data[sp+1],data[sp+2]];if(sR===fR&&sG===fG&&sB===fB)return;const stack=[[Math.floor(sx),Math.floor(sy)]];while(stack.length){const[x,y]=stack.pop(),pos=(y*canvas.width+x)*4;if(x<0||x>=canvas.width||y<0||y>=canvas.height)continue;if(Math.abs(data[pos]-sR)>10||Math.abs(data[pos+1]-sG)>10||Math.abs(data[pos+2]-sB)>10)continue;data[pos]=fR;data[pos+1]=fG;data[pos+2]=fB;data[pos+3]=255;stack.push([x+1,y],[x-1,y],[x,y+1],[x,y-1]);}ctx.putImageData(pd,0,0);}
 
-  window.atl_calculateAverage = function() {
-    var sum=0;
-    dicePool.forEach(function(d){
-      var n=d.sides, base=(n+1)/2, shift=(n*n-1)/(6*n);
-      sum += d.state==='adv'?base+shift: d.state==='dis'?base-shift:base;
-    });
-    var mod=parseInt(document.getElementById('dice-modifier').value)||0;
-    var el=document.getElementById('dice-avg-display');
-    if(el) el.innerText='Exp. Avg: '+(sum+mod).toFixed(2);
-  };
-
-  window.atl_rollAllDice = function() {
-    if (!dicePool.length||isRolling) return;
-    isRolling=true;
-    var modifier=parseInt(document.getElementById('dice-modifier').value)||0;
-    dicePool.forEach(function(d){
-      var el=document.getElementById('die-'+d.id);
-      if(el) el.classList.remove('crit-anim');
-    });
-    var ticks=0;
-    var interval=setInterval(function(){
-      ticks++;
-      dicePool.forEach(function(die){
-        var el=document.getElementById('die-'+die.id);
-        if(el){ el.innerText=Math.floor(Math.random()*die.sides)+1; el.classList.add('rolling'); }
-      });
-      if(ticks>15){ clearInterval(interval); finalizeRoll(modifier); }
-    },80);
-  };
-
-  function finalizeRoll(modifier) {
-    var total=0;
-    dicePool.forEach(function(die){
-      var r1=Math.floor(Math.random()*die.sides)+1;
-      var r2=Math.floor(Math.random()*die.sides)+1;
-      var v = die.state==='adv'?Math.max(r1,r2): die.state==='dis'?Math.min(r1,r2):r1;
-      die.value=v; total+=v;
-      var el=document.getElementById('die-'+die.id);
-      if(el){ el.innerText=v; el.classList.remove('rolling'); if(v===die.sides) el.classList.add('crit-anim'); }
-    });
-    var finalTotal=total+modifier;
-    document.getElementById('dice-total-display').innerText=
-      total+(modifier!==0?' ('+(modifier>=0?'+':'')+modifier+') = '+finalTotal:'');
-    isRolling=false;
-  }
-
-  // ── Helpers ──────────────────────────────────────────────
-  function esc(str) {
-    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-  }
-
-  // ── Boot ─────────────────────────────────────────────────
-  init();
-
-})();
+init();
 </script>
