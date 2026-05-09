@@ -2,7 +2,7 @@
 // 6. HAC (HOME ACCESS CENTER) LOGIC
 // ==========================================
 // Called by loadPage('hac') — show login if not authed, grades if already fetched
-const HAC_PROXY_URL = window.location.origin; 
+//const HAC_PROXY_URL = window.location.origin; 
 const HAC_PROXY_URL = "https://glowing-barnacle-xjrp9q6r7j9h9pq5-3000.app.github.dev";
 const HAC_PROXY = HAC_PROXY_URL;
 
