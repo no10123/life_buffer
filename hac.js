@@ -3,8 +3,8 @@
 // ==========================================
 // Called by loadPage('hac') — show login if not authed, grades if already fetched
 
-const HAC_PROXY_URL = "https://glowing-barnacle-xjrp9q6r7j9h9pq5-3000.app.github.dev";
-const HAC_PROXY = HAC_PROXY_URL;
+//const HAC_PROXY_URL = "https://glowing-barnacle-xjrp9q6r7j9h9pq5-3000.app.github.dev";
+//const HAC_PROXY = HAC_PROXY_URL;
 
 //const API_BASE = 'http://localhost:3000/hac'; // Adjust if your server is on a different port/host
 //let sessionId = ''; // We use sessionId now instead of raw cookies

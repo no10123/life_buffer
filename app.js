@@ -1,12 +1,22 @@
 // ==========================================
+// 0. ENVIRONMENT DETECTION
+// ==========================================
+const IS_CODESPACES = window.location.hostname.includes('app.github.dev');
+const HAC_PROXY_URL = IS_CODESPACES 
+    ? window.location.origin        // e.g. https://glowing-barnacle-xxx-3000.app.github.dev
+    : 'https://corsproxy.io/?url='; // fallback for GitHub Pages
+
+console.log(`Environment: ${IS_CODESPACES ? 'Codespaces' : 'GitHub Pages'} — Proxy: ${HAC_PROXY_URL}`);
+
+// ==========================================
 // 1. SETTINGS & PERSONALIZATION LOGIC
 // ==========================================
 applySavedSettings(); // Run immediately on load
 
 // Add these to the top of app.js (global scope)
-let gapiInited = false;
-let gisInited = false;
-let tokenClient;
+window.tokenClient = null;
+window.accessToken = null;
+window.nextPageToken = null;
 
 // Update your loadPage function's specific logic:
 // Inside your loadPage function, find the 'if (page === "drive")' block:
