@@ -268,13 +268,15 @@ app.post('/canvas/proxy', async (req, res) => {
 
     try {
         const url = `${baseUrl.replace(/\/$/, '')}${path}`;
-        console.log(`[canvas/proxy] ${method} ${url}`);
+        const normalizedMethod = (method || 'GET').toUpperCase();
+        console.log(`[canvas/proxy] ${normalizedMethod} ${url}`);
         const response = await axios({
             url,
-            method,
+            method: normalizedMethod,
             headers: {
                 'Authorization': `Bearer ${accessToken}`,
-                'Accept': 'application/json'
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
             },
             data: body || undefined,
             validateStatus: () => true

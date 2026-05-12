@@ -829,8 +829,6 @@ function connectAiAgent() {
         }
     });
 }
-    }
-}
 
 function composeAiPrompt() {
     const assignmentLines = recentTodoCanvasAssignments.slice(0, 5).map(a => `- ${a.name || a.title} (${a.context_name || 'Course'}) due ${a.due_at || 'unknown'}`);
