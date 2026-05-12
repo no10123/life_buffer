@@ -121,7 +121,7 @@ async function testCanvasConnection() {
 
 function getCanvasConfig() {
     return {
-        baseUrl: localStorage.getItem('canvasBaseUrl') || 'https://learn.irvingisd.net',
+        baseUrl: localStorage.getItem('canvasBaseUrl') || 'https://irvingisd.instructure.com',
         accessToken: localStorage.getItem('canvasAccessToken') || ''
     };
 }

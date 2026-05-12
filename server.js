@@ -249,6 +249,7 @@ app.post('/canvas/proxy', async (req, res) => {
 
     try {
         const url = `${baseUrl.replace(/\/$/, '')}${path}`;
+        console.log(`[canvas/proxy] ${method} ${url}`);
         const response = await axios({
             url,
             method,
@@ -260,6 +261,7 @@ app.post('/canvas/proxy', async (req, res) => {
             validateStatus: () => true
         });
 
+        console.log(`[canvas/proxy] Response status: ${response.status}`);
         if (response.headers['content-type']?.includes('application/json')) {
             return res.status(response.status).json(response.data);
         }
