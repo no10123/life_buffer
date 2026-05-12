@@ -3,6 +3,35 @@
 // ==========================================
 applySavedSettings(); // Run immediately on load
 
+const TODO_TASKS_KEY = 'todoGeneratedTasks';
+const TODO_STARRED_KEY = 'todoStarredAssignments';
+let recentTodoCanvasAssignments = [];
+let recentEmailSummaries = [];
+let todoGeneratedTasks = JSON.parse(localStorage.getItem(TODO_TASKS_KEY) || '[]');
+let starredAssignmentIds = JSON.parse(localStorage.getItem(TODO_STARRED_KEY) || '[]');
+
+function saveTodoTasks() {
+    localStorage.setItem(TODO_TASKS_KEY, JSON.stringify(todoGeneratedTasks));
+}
+
+function saveStarredAssignments() {
+    localStorage.setItem(TODO_STARRED_KEY, JSON.stringify(starredAssignmentIds));
+}
+
+function toggleStarAssignment(assignmentId) {
+    if (starredAssignmentIds.includes(assignmentId)) {
+        starredAssignmentIds = starredAssignmentIds.filter(id => id !== assignmentId);
+    } else {
+        starredAssignmentIds.push(assignmentId);
+    }
+    saveStarredAssignments();
+    renderStarredAssignments();
+}
+
+function isAssignmentStarred(assignmentId) {
+    return starredAssignmentIds.includes(assignmentId);
+}
+
 function initSettings() {
     document.getElementById('set-title').value = document.title;
     document.getElementById('set-primary-color').value = localStorage.getItem('themePrimary') || '#0056b3';
@@ -166,6 +195,7 @@ async function loadPage(pageName, btn) {
             hac:      loadHacData,
             playlist: renderPlaylist,
             settings: () => { initSettings(); initCanvasSettings(); },
+            todo:     loadTodoPage,
             zipper:   initZipper,
         };
         hooks[pageName]?.();
@@ -506,6 +536,199 @@ async function fetchCanvasAssignments(config) {
 
         return assignments;
     }
+}
+
+async function loadTodoPage() {
+    await refreshTodoData();
+}
+
+async function refreshTodoData() {
+    const todoList = document.getElementById('todo-list');
+    const canvasContext = document.getElementById('canvas-context');
+    const emailContext = document.getElementById('email-context');
+    const starredContainer = document.getElementById('starred-assignments');
+    const aiPanel = document.getElementById('ai-agent-output');
+
+    if (todoList) todoList.innerHTML = '<p style="color: var(--text-muted);">Loading task suggestions...</p>';
+    if (canvasContext) canvasContext.innerHTML = '<p style="color: var(--text-muted);">Loading Canvas context...</p>';
+    if (emailContext) emailContext.innerHTML = '<p style="color: var(--text-muted);">Loading email context...</p>';
+    if (starredContainer) starredContainer.innerHTML = '<p style="color: var(--text-muted);">Loading starred assignments...</p>';
+    if (aiPanel) aiPanel.innerHTML = '<p style="color: var(--text-muted);">AI agent ready. Click Generate Tasks to create a plan.</p>';
+
+    const canvasConfig = getCanvasConfig();
+    recentTodoCanvasAssignments = [];
+    recentEmailSummaries = [];
+
+    if (canvasConfig.accessToken) {
+        try {
+            recentTodoCanvasAssignments = await fetchCanvasAssignments(canvasConfig);
+        } catch (error) {
+            console.warn('Todo page canvas load failed:', error);
+            if (canvasContext) canvasContext.innerHTML = `<p style="color: var(--warning);">Unable to load Canvas assignments: ${error.message}</p>`;
+        }
+    } else if (canvasContext) {
+        canvasContext.innerHTML = '<p style="color: var(--warning);">Canvas token missing. Set it in Settings.</p>';
+    }
+
+    if (accessToken) {
+        try {
+            recentEmailSummaries = await fetchEmailContext();
+        } catch (error) {
+            console.warn('Todo page email load failed:', error);
+            if (emailContext) emailContext.innerHTML = `<p style="color: var(--warning);">Unable to load email context: ${error.message}</p>`;
+        }
+    } else if (emailContext) {
+        emailContext.innerHTML = '<p style="color: var(--warning);">Google sign-in required to load Gmail context.</p>';
+    }
+
+    renderCanvasContext();
+    renderEmailContext();
+    renderStarredAssignments();
+    renderTodoList();
+}
+
+async function fetchEmailContext() {
+    const summary = [];
+    if (!accessToken) return summary;
+
+    const url = 'https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=5';
+    const listResponse = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } });
+    const listData = await listResponse.json();
+    if (!listData.messages) return summary;
+
+    for (const message of listData.messages) {
+        const msgResponse = await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/messages/${message.id}?format=metadata&metadataHeaders=Subject&metadataHeaders=From`, {
+            headers: { Authorization: `Bearer ${accessToken}` }
+        });
+        const msgData = await msgResponse.json();
+        let subject = 'No Subject';
+        let from = 'Unknown Sender';
+
+        msgData.payload.headers.forEach(header => {
+            if (header.name.toLowerCase() === 'subject') subject = header.value;
+            if (header.name.toLowerCase() === 'from') from = header.value;
+        });
+
+        summary.push({ subject, from, snippet: msgData.snippet || '' });
+    }
+
+    return summary;
+}
+
+function renderCanvasContext() {
+    const canvasContext = document.getElementById('canvas-context');
+    if (!canvasContext) return;
+
+    if (!recentTodoCanvasAssignments.length) {
+        canvasContext.innerHTML = '<p style="color: var(--text-muted);">No Canvas assignments available yet.</p>';
+        return;
+    }
+
+    canvasContext.innerHTML = recentTodoCanvasAssignments.slice(0, 5).map(assignment => {
+        const dueDate = assignment.due_at ? new Date(assignment.due_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'No due date';
+        return `<div class="context-item"><strong>${assignment.name || assignment.title}</strong><span>${assignment.context_name || 'Course'}</span><span>${dueDate}</span></div>`;
+    }).join('');
+}
+
+function renderEmailContext() {
+    const emailContext = document.getElementById('email-context');
+    if (!emailContext) return;
+
+    if (!recentEmailSummaries.length) {
+        emailContext.innerHTML = '<p style="color: var(--text-muted);">No Gmail context available yet.</p>';
+        return;
+    }
+
+    emailContext.innerHTML = recentEmailSummaries.map(email => {
+        return `<div class="context-item"><strong>${email.subject}</strong><span>${email.from}</span></div>`;
+    }).join('');
+}
+
+function renderStarredAssignments() {
+    const starredContainer = document.getElementById('starred-assignments');
+    if (!starredContainer) return;
+
+    const starred = recentTodoCanvasAssignments.filter(a => isAssignmentStarred(a.id || a.assignment_id || a.name));
+
+    if (!starred.length) {
+        starredContainer.innerHTML = '<p style="color: var(--text-muted);">No starred assignments yet. Star items from Canvas or use AI suggestions.</p>';
+        return;
+    }
+
+    starredContainer.innerHTML = starred.map(assignment => {
+        const title = assignment.name || assignment.title || 'Untitled';
+        const due = assignment.due_at ? new Date(assignment.due_at).toLocaleDateString('en-US') : 'No date';
+        return `<div class="task-row"><div><strong>${title}</strong><p>${assignment.context_name || 'Course'} • ${due}</p></div></div>`;
+    }).join('');
+}
+
+function renderTodoList() {
+    const todoList = document.getElementById('todo-list');
+    if (!todoList) return;
+
+    if (!todoGeneratedTasks.length) {
+        todoList.innerHTML = '<p style="color: var(--text-muted);">Press Generate Tasks with AI to build your first study plan.</p>';
+        return;
+    }
+
+    todoList.innerHTML = todoGeneratedTasks.map((task, index) => {
+        return `<div class="task-row"><div><strong>${index + 1}. ${task.title}</strong><p>${task.details}</p></div></div>`;
+    }).join('');
+}
+
+function generateAiTasks() {
+    const aiPanel = document.getElementById('ai-agent-output');
+
+    todoGeneratedTasks = [];
+
+    if (recentTodoCanvasAssignments.length) {
+        const assignments = recentTodoCanvasAssignments.slice(0, 5);
+        assignments.forEach((assignment, index) => {
+            const dueDate = assignment.due_at ? new Date(assignment.due_at) : null;
+            const dueText = dueDate ? `due ${dueDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}` : 'no due date';
+            todoGeneratedTasks.push({
+                title: assignment.name || assignment.title || `Assignment ${index + 1}`,
+                details: `From ${assignment.context_name || 'Canvas'}. ${dueText}.`,
+            });
+        });
+    }
+
+    if (recentEmailSummaries.length && todoGeneratedTasks.length < 5) {
+        recentEmailSummaries.slice(0, 3).forEach(email => {
+            todoGeneratedTasks.push({
+                title: `Review email: ${email.subject}`,
+                details: `From ${email.from}. ${email.snippet || 'Check the message for details.'}`,
+            });
+        });
+    }
+
+    if (!todoGeneratedTasks.length) {
+        todoGeneratedTasks.push({ title: 'No available context found.', details: 'Sign in to Google and configure Canvas before generating tasks.' });
+    }
+
+    saveTodoTasks();
+    renderTodoList();
+
+    if (aiPanel) {
+        aiPanel.innerHTML = '<p>AI generated a task list based on your Canvas and email context. Connect Gemini later to replace this with live recommendations.</p>';
+    }
+}
+
+function connectAiAgent() {
+    const aiPanel = document.getElementById('ai-agent-output');
+    if (aiPanel) {
+        aiPanel.innerHTML = '<p style="color: var(--text-muted);">Gemini integration placeholder active. Actual API connection can be added here later.</p>';
+    }
+}
+
+function composeAiPrompt() {
+    const assignmentLines = recentTodoCanvasAssignments.slice(0, 5).map(a => `- ${a.name || a.title} (${a.context_name || 'Course'}) due ${a.due_at || 'unknown'}`);
+    const emailLines = recentEmailSummaries.slice(0, 5).map(e => `- ${e.subject} from ${e.from}`);
+    return `You are a student study coach. Here are the current assignments and email action items:\n\nAssignments:\n${assignmentLines.join('\n')}\n\nEmails:\n${emailLines.join('\n')}\n\nSuggest the top 3 tasks for the student.`;
+}
+
+function composeAiPromptSummary() {
+    return composeAiPrompt();
 }
 
 function renderCanvasAssignments(container, assignments) {

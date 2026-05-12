@@ -181,6 +181,88 @@ body {
     margin-top: 20px;
 }
 
+.todo-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 18px;
+}
+
+.primary-btn,
+.secondary-btn {
+    border: none;
+    border-radius: 10px;
+    padding: 12px 18px;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.primary-btn {
+    background: var(--primary);
+    color: white;
+}
+
+.secondary-btn {
+    background: #eef2ff;
+    color: var(--text-main);
+    border: 1px solid #c7d2fe;
+}
+
+.todo-layout {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 24px;
+    align-items: flex-start;
+}
+
+.todo-main {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.todo-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.context-list,
+.todo-list {
+    display: grid;
+    gap: 14px;
+    margin-top: 12px;
+}
+
+.context-item,
+.task-row {
+    border: 1px solid #e2e8f0;
+    background: #f8fafc;
+    padding: 14px;
+    border-radius: 12px;
+}
+
+.context-item strong,
+.task-row strong {
+    display: block;
+    margin-bottom: 8px;
+}
+
+.context-item span {
+    display: block;
+    font-size: 13px;
+    color: var(--text-muted);
+}
+
+.ai-output {
+    margin-top: 14px;
+    min-height: 120px;
+    color: var(--text-main);
+}
+
 .card {
     background-color: var(--card-bg);
     padding: 24px;

@@ -1,0 +1,44 @@
+<section id="todo">
+    <header class="section-header">
+        <h1><i class="fa-solid fa-list-check" style="color: var(--primary);"></i> Todo & Study Planner</h1>
+        <p>Generate personalized tasks from your Canvas assignments, Gmail context, and AI recommendations.</p>
+        <div class="todo-actions">
+            <button onclick="generateAiTasks()" class="primary-btn"><i class="fa-solid fa-robot"></i> Generate Tasks with AI</button>
+            <button onclick="connectAiAgent()" class="secondary-btn"><i class="fa-solid fa-link"></i> Connect Gemini</button>
+        </div>
+    </header>
+
+    <div class="todo-layout">
+        <div class="todo-main">
+            <div class="card">
+                <h3>Smart Todo List</h3>
+                <p>AI-generated tasks will appear here based on your Canvas and email context.</p>
+                <div id="todo-list" class="todo-list"></div>
+            </div>
+
+            <div class="card">
+                <h3>Starred Assignments</h3>
+                <p>Keep your most important Canvas work front and center.</p>
+                <div id="starred-assignments" class="todo-list"></div>
+            </div>
+        </div>
+
+        <aside class="todo-sidebar">
+            <div class="card">
+                <h3>AI Study Agent</h3>
+                <p>Use this panel to see how the assistant is interpreting your current Canvas and Gmail context.</p>
+                <div id="ai-agent-output" class="ai-output"></div>
+            </div>
+
+            <div class="card">
+                <h3>Canvas Context</h3>
+                <div id="canvas-context" class="context-list"></div>
+            </div>
+
+            <div class="card">
+                <h3>Email Context</h3>
+                <div id="email-context" class="context-list"></div>
+            </div>
+        </aside>
+    </div>
+</section>
