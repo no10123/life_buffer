@@ -32,6 +32,94 @@ function applySavedSettings() {
     if (localStorage.getItem('themeFontSize')) document.body.style.fontSize = localStorage.getItem('themeFontSize');
 }
 
+// Canvas Settings Functions
+function initCanvasSettings() {
+    const baseUrl = localStorage.getItem('canvasBaseUrl') || 'https://learn.irvingisd.net';
+    const accessToken = localStorage.getItem('canvasAccessToken') || '';
+
+    document.getElementById('canvas-base-url').value = baseUrl;
+    document.getElementById('canvas-access-token').value = accessToken;
+}
+
+function updateCanvasSettings() {
+    const baseUrl = document.getElementById('canvas-base-url').value;
+    const accessToken = document.getElementById('canvas-access-token').value;
+
+    localStorage.setItem('canvasBaseUrl', baseUrl);
+    localStorage.setItem('canvasAccessToken', accessToken);
+}
+
+async function testCanvasConnection() {
+    const testBtn = document.getElementById('test-canvas-btn');
+    const resultDiv = document.getElementById('canvas-test-result');
+
+    const baseUrl = document.getElementById('canvas-base-url').value;
+    const accessToken = document.getElementById('canvas-access-token').value;
+
+    if (!baseUrl || !accessToken) {
+        resultDiv.style.display = 'block';
+        resultDiv.style.background = '#fee';
+        resultDiv.style.border = '1px solid #fcc';
+        resultDiv.style.color = '#c33';
+        resultDiv.innerHTML = '<i class="fa-solid fa-exclamation-triangle"></i> Please enter both Canvas URL and access token.';
+        return;
+    }
+
+    testBtn.disabled = true;
+    testBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Testing...';
+    resultDiv.style.display = 'none';
+
+    try {
+        const testConfig = { baseUrl, accessToken };
+        const userData = await canvasApiRequest(testConfig, '/api/v1/users/self/profile');
+
+        resultDiv.style.display = 'block';
+        resultDiv.style.background = '#efe';
+        resultDiv.style.border = '1px solid #cfc';
+        resultDiv.style.color = '#363';
+        resultDiv.innerHTML = `<i class="fa-solid fa-check-circle"></i> Connected successfully! Welcome, ${userData.name || 'User'}.`;
+    } catch (error) {
+        resultDiv.style.display = 'block';
+        resultDiv.style.background = '#fee';
+        resultDiv.style.border = '1px solid #fcc';
+        resultDiv.style.color = '#c33';
+        resultDiv.innerHTML = `<i class="fa-solid fa-exclamation-triangle"></i> Connection failed: ${error.message}`;
+    } finally {
+        testBtn.disabled = false;
+        testBtn.innerHTML = '<i class="fa-solid fa-plug"></i> Test Connection';
+    }
+}
+
+function getCanvasConfig() {
+    return {
+        baseUrl: localStorage.getItem('canvasBaseUrl') || 'https://learn.irvingisd.net',
+        accessToken: localStorage.getItem('canvasAccessToken') || ''
+    };
+}
+
+async function canvasApiRequest(config, path, method = 'GET', body = null) {
+    const response = await fetch('/canvas/proxy', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            baseUrl: config.baseUrl,
+            accessToken: config.accessToken,
+            path,
+            method,
+            body
+        })
+    });
+
+    if (!response.ok) {
+        const errorText = await response.text().catch(() => '');
+        throw new Error(`Proxy request failed ${response.status}: ${response.statusText}${errorText ? ' - ' + errorText : ''}`);
+    }
+
+    return response.json();
+}
+
 // ==========================================
 // 2. DYNAMIC PAGE ROUTING (SPA LOGIC)
 // ==========================================
@@ -77,7 +165,7 @@ async function loadPage(pageName, btn) {
             canvas:   loadCanvasData,
             hac:      loadHacData,
             playlist: renderPlaylist,
-            settings: initSettings,
+            settings: () => { initSettings(); initCanvasSettings(); },
             zipper:   initZipper,
         };
         hooks[pageName]?.();
@@ -301,17 +389,187 @@ async function fetchEmails(loadMore = false) {
 // ==========================================
 // 4. MOCK DATA LOGIC (Canvas & HAC)
 // ==========================================
-function loadCanvasData() {
+// ==========================================
+// 4. CANVAS API INTEGRATION
+// ==========================================
+async function loadCanvasData() {
     const container = document.getElementById('canvas-data');
-    if(!container || container.children.length > 0) return; 
-    container.innerHTML = '<p style="grid-column: 1/-1; text-align: center; color: var(--text-muted);"><i class="fa-solid fa-spinner fa-spin"></i> Fetching Canvas data...</p>';
+    const statusDiv = document.getElementById('canvas-status');
+    const refreshBtn = document.getElementById('refresh-canvas-btn');
 
-    setTimeout(() => {
+    if(!container) return;
+
+    // Show loading state
+    container.innerHTML = '<p style="grid-column: 1/-1; text-align: center; color: var(--text-muted);"><i class="fa-solid fa-spinner fa-spin"></i> Fetching Canvas data...</p>';
+    if (statusDiv) statusDiv.style.display = 'none';
+    if (refreshBtn) {
+        refreshBtn.disabled = true;
+        refreshBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Loading...';
+    }
+
+    try {
+        // Get Canvas configuration from localStorage
+        const canvasConfig = getCanvasConfig();
+
+        if (!canvasConfig.accessToken) {
+            container.innerHTML = `
+                <div style="grid-column: 1/-1; text-align: center; color: var(--text-muted);">
+                    <i class="fa-solid fa-key"></i>
+                    <p>Canvas API token not configured.</p>
+                    <p style="font-size: 14px; margin-top: 8px;">
+                        Go to <a href="#" onclick="loadPage('settings')" style="color: var(--primary);">Settings</a> to configure your Canvas integration.
+                    </p>
+                </div>
+            `;
+            return;
+        }
+
+        // Fetch upcoming assignments
+        const assignments = await fetchCanvasAssignments(canvasConfig);
+
+        if (assignments && assignments.length > 0) {
+            renderCanvasAssignments(container, assignments);
+            if (statusDiv) {
+                statusDiv.style.display = 'block';
+                statusDiv.innerHTML = `<div style="background: #efe; color: #363; padding: 10px; border-radius: 6px; border: 1px solid #cfc;"><i class="fa-solid fa-check-circle"></i> Found ${assignments.length} upcoming assignment${assignments.length !== 1 ? 's' : ''}.</div>`;
+            }
+        } else {
+            container.innerHTML = '<p style="grid-column: 1/-1; text-align: center; color: var(--text-muted);">No upcoming assignments found.</p>';
+            if (statusDiv) {
+                statusDiv.style.display = 'block';
+                statusDiv.innerHTML = `<div style="background: #eef; color: #336; padding: 10px; border-radius: 6px; border: 1px solid #ccf;"><i class="fa-solid fa-info-circle"></i> No upcoming assignments found.</div>`;
+            }
+        }
+
+    } catch (error) {
+        console.error('Canvas API Error:', error);
         container.innerHTML = `
-            <div class="card animate-slide-up"><div style="display: flex; justify-content: space-between;"><h3>AP US History</h3><i class="fa-solid fa-book-journal-whills" style="color: var(--primary); font-size: 20px;"></i></div><p><strong>To Do:</strong> Chapter 10 Essay</p><p><strong>Due:</strong> Tomorrow</p></div>
-            <div class="card animate-slide-up" style="animation-delay: 0.1s;"><div style="display: flex; justify-content: space-between;"><h3>Calculus</h3><i class="fa-solid fa-calculator" style="color: var(--primary); font-size: 20px;"></i></div><p><strong>To Do:</strong> Problem Set 4</p><p><strong>Due:</strong> Friday</p></div>
+            <div style="grid-column: 1/-1; text-align: center; color: var(--warning);">
+                <i class="fa-solid fa-exclamation-triangle"></i>
+                <p>Failed to load Canvas data. Check your API token configuration.</p>
+                <p style="font-size: 12px; margin-top: 8px;">${error.message}</p>
+                <button onclick="loadPage('settings')" style="margin-top: 10px; padding: 8px 16px; background: var(--primary); color: white; border: none; border-radius: 6px; cursor: pointer;">
+                    Configure Settings
+                </button>
+            </div>
         `;
-    }, 800);
+        if (statusDiv) {
+            statusDiv.style.display = 'block';
+            statusDiv.innerHTML = `<div style="background: #fee; color: #c33; padding: 10px; border-radius: 6px; border: 1px solid #fcc;"><i class="fa-solid fa-exclamation-triangle"></i> Error loading assignments: ${error.message}</div>`;
+        }
+    } finally {
+        if (refreshBtn) {
+            refreshBtn.disabled = false;
+            refreshBtn.innerHTML = '<i class="fa-solid fa-rotate-right"></i> Refresh';
+        }
+    }
+}
+
+async function fetchCanvasAssignments(config) {
+    try {
+        const courses = await canvasApiRequest(config, '/api/v1/courses?enrollment_state=active&per_page=50');
+        const assignments = [];
+
+        for (const course of courses.slice(0, 10)) {
+            try {
+                const courseAssignments = await canvasApiRequest(config, `/api/v1/courses/${course.id}/assignments?bucket=upcoming&per_page=20`);
+                courseAssignments.forEach(assignment => {
+                    assignment.context_name = course.name;
+                    assignment.html_url = assignment.html_url || `${config.baseUrl}/courses/${course.id}/assignments/${assignment.id}`;
+                });
+                assignments.push(...courseAssignments);
+            } catch (error) {
+                console.warn(`Failed to fetch assignments for course ${course.name}:`, error);
+            }
+        }
+
+        const now = new Date();
+        const upcomingAssignments = assignments
+            .filter(assignment => assignment.due_at && new Date(assignment.due_at) > now)
+            .sort((a, b) => new Date(a.due_at) - new Date(b.due_at))
+            .slice(0, 20);
+
+        return upcomingAssignments;
+
+    } catch (error) {
+        console.warn('Failed to fetch assignments from courses, trying planner items:', error);
+
+        const plannerItems = await canvasApiRequest(config, `/api/v1/planner/items?start_date=${new Date().toISOString().split('T')[0]}&per_page=50`);
+
+        const assignments = plannerItems
+            .filter(item => item.plannable_type === 'assignment' && item.plannable)
+            .map(item => ({
+                ...item.plannable,
+                context_name: item.context_name || item.course_name,
+                html_url: item.html_url
+            }));
+
+        return assignments;
+    }
+}
+
+function renderCanvasAssignments(container, assignments) {
+    const html = assignments.map((assignment, index) => {
+        const dueDate = new Date(assignment.due_at);
+        const now = new Date();
+        const timeDiff = dueDate - now;
+        const daysUntilDue = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
+
+        let urgencyClass = '';
+        let urgencyText = '';
+
+        if (daysUntilDue < 0) {
+            urgencyClass = 'overdue';
+            urgencyText = 'Overdue';
+        } else if (daysUntilDue === 0) {
+            urgencyClass = 'due-today';
+            urgencyText = 'Due Today';
+        } else if (daysUntilDue === 1) {
+            urgencyClass = 'due-tomorrow';
+            urgencyText = 'Due Tomorrow';
+        } else if (daysUntilDue <= 3) {
+            urgencyClass = 'due-soon';
+            urgencyText = `Due in ${daysUntilDue} days`;
+        } else {
+            urgencyText = `Due in ${daysUntilDue} days`;
+        }
+
+        const formattedDate = dueDate.toLocaleDateString('en-US', {
+            weekday: 'short',
+            month: 'short',
+            day: 'numeric',
+            hour: 'numeric',
+            minute: '2-digit'
+        });
+
+        const courseName = assignment.context_name || assignment.course_name || 'Unknown Course';
+        const title = assignment.name || assignment.title || 'Untitled Assignment';
+        const description = assignment.description ? assignment.description.replace(/<[^>]*>/g, '').substring(0, 100) + '...' : '';
+
+        return `
+            <div class="card animate-slide-up ${urgencyClass}" style="animation-delay: ${index * 0.1}s;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                    <div style="flex: 1;">
+                        <h3 style="margin-bottom: 8px;">${title}</h3>
+                        <p style="color: var(--primary); font-weight: 500; margin-bottom: 4px;">${courseName}</p>
+                        ${description ? `<p style="font-size: 14px; color: var(--text-muted); margin-bottom: 8px;">${description}</p>` : ''}
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <i class="fa-solid fa-calendar-days" style="color: var(--text-muted);"></i>
+                            <span style="font-size: 14px; color: var(--text-muted);">${formattedDate}</span>
+                            ${urgencyText ? `<span style="font-size: 12px; padding: 2px 6px; border-radius: 10px; background: var(--primary); color: white;">${urgencyText}</span>` : ''}
+                        </div>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 8px; align-items: flex-end;">
+                        <i class="fa-solid fa-book" style="color: var(--primary); font-size: 24px;"></i>
+                        ${assignment.html_url ? `<a href="${assignment.html_url}" target="_blank" style="color: var(--primary); text-decoration: none; font-size: 12px;"><i class="fa-solid fa-external-link"></i> View</a>` : ''}
+                    </div>
+                </div>
+                ${assignment.points_possible ? `<div style="margin-top: 12px; padding-top: 8px; border-top: 1px solid var(--border); font-size: 14px; color: var(--text-muted);"><i class="fa-solid fa-star"></i> ${assignment.points_possible} points</div>` : ''}
+            </div>
+        `;
+    }).join('');
+
+    container.innerHTML = html;
 }
 
 function loadIframeApp() {

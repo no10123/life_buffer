@@ -240,6 +240,38 @@ function computePct(score, max) {
 const fs = require('fs');
 const path = require('path');
 
+app.post('/canvas/proxy', async (req, res) => {
+    const { baseUrl, path, accessToken, method = 'GET', body } = req.body;
+
+    if (!baseUrl || !path || !accessToken) {
+        return res.status(400).json({ error: 'Missing Canvas proxy parameters.' });
+    }
+
+    try {
+        const url = `${baseUrl.replace(/\/$/, '')}${path}`;
+        const response = await axios({
+            url,
+            method,
+            headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'Accept': 'application/json'
+            },
+            data: body || undefined,
+            validateStatus: () => true
+        });
+
+        if (response.headers['content-type']?.includes('application/json')) {
+            return res.status(response.status).json(response.data);
+        }
+
+        res.status(response.status).send(response.data);
+    } catch (error) {
+        console.error('[canvas/proxy]', error.message, error.response?.data || '');
+        const status = error.response?.status || 500;
+        return res.status(status).json({ error: error.message, details: error.response?.data });
+    }
+});
+
 app.get('/api/pages', (req, res) => {
     const pagesDir = path.join(__dirname, 'pages');
     fs.readdir(pagesDir, (err, files) => {
