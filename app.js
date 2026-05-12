@@ -63,7 +63,8 @@ function applySavedSettings() {
 
 // Canvas Settings Functions
 function initCanvasSettings() {
-    const baseUrl = localStorage.getItem('canvasBaseUrl') || 'https://learn.irvingisd.net';
+    const defaultCanvasUrl = 'https://irvingisd.instructure.com';
+    const baseUrl = localStorage.getItem('canvasBaseUrl') || defaultCanvasUrl;
     const accessToken = localStorage.getItem('canvasAccessToken') || '';
 
     document.getElementById('canvas-base-url').value = baseUrl;
@@ -71,7 +72,7 @@ function initCanvasSettings() {
 }
 
 function updateCanvasSettings() {
-    const baseUrl = document.getElementById('canvas-base-url').value;
+    const baseUrl = document.getElementById('canvas-base-url').value || 'https://irvingisd.instructure.com';
     const accessToken = document.getElementById('canvas-access-token').value;
 
     localStorage.setItem('canvasBaseUrl', baseUrl);
@@ -82,7 +83,7 @@ async function testCanvasConnection() {
     const testBtn = document.getElementById('test-canvas-btn');
     const resultDiv = document.getElementById('canvas-test-result');
 
-    const baseUrl = document.getElementById('canvas-base-url').value;
+    const baseUrl = document.getElementById('canvas-base-url').value || 'https://irvingisd.instructure.com';
     const accessToken = document.getElementById('canvas-access-token').value;
 
     if (!baseUrl || !accessToken) {
