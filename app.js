@@ -502,7 +502,7 @@ async function fetchCanvasAssignments(config) {
 
         for (const course of courses.slice(0, 10)) {
             try {
-                const courseAssignments = await canvasApiRequest(config, `/api/v1/courses/${course.id}/assignments?bucket=upcoming&per_page=20`);
+                const courseAssignments = await canvasApiRequest(config, `/api/v1/courses/${course.id}/assignments?per_page=100`);
                 courseAssignments.forEach(assignment => {
                     assignment.context_name = course.name;
                     assignment.html_url = assignment.html_url || `${config.baseUrl}/courses/${course.id}/assignments/${assignment.id}`;
