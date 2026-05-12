@@ -251,6 +251,32 @@ body {
     margin-bottom: 8px;
 }
 
+.task-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 8px;
+}
+
+.task-priority {
+    font-size: 12px;
+    font-weight: 600;
+    padding: 4px 8px;
+    border-radius: 6px;
+    background: rgba(0,0,0,0.05);
+}
+
+.task-details p {
+    margin: 4px 0;
+    font-size: 14px;
+    color: var(--text-muted);
+}
+
+.task-details p i {
+    margin-right: 6px;
+    width: 14px;
+}
+
 .context-item span {
     display: block;
     font-size: 13px;

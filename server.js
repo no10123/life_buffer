@@ -240,6 +240,25 @@ function computePct(score, max) {
 const fs = require('fs');
 const path = require('path');
 
+// Gemini AI integration
+const { GoogleGenerativeAI } = require('@google/generative-ai');
+
+// Initialize Gemini client
+let genAI = null;
+try {
+    // Try to load service account key
+    const keyPath = path.join(__dirname, 'ai-admin-key.json');
+    if (fs.existsSync(keyPath)) {
+        const keyData = JSON.parse(fs.readFileSync(keyPath, 'utf8'));
+        genAI = new GoogleGenerativeAI(keyData.private_key);
+        console.log('✓ Gemini AI client initialized');
+    } else {
+        console.log('⚠ Gemini key file not found - AI features will be disabled');
+    }
+} catch (error) {
+    console.error('Error initializing Gemini client:', error.message);
+}
+
 app.post('/canvas/proxy', async (req, res) => {
     const { baseUrl, path, accessToken, method = 'GET', body } = req.body;
 
@@ -271,6 +290,101 @@ app.post('/canvas/proxy', async (req, res) => {
         console.error('[canvas/proxy]', error.message, error.response?.data || '');
         const status = error.response?.status || 500;
         return res.status(status).json({ error: error.message, details: error.response?.data });
+    }
+});
+
+app.post('/api/gemini/generate-tasks', async (req, res) => {
+    if (!genAI) {
+        return res.status(503).json({ error: 'Gemini AI not configured. Please add ai-admin-key.json file.' });
+    }
+
+    const { canvasAssignments, emailSummaries, existingTasks } = req.body;
+
+    if (!canvasAssignments && !emailSummaries) {
+        return res.status(400).json({ error: 'No context provided for AI generation.' });
+    }
+
+    try {
+        const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+
+        // Build context from Canvas and email data
+        let context = 'Generate a personalized study plan and todo list based on the following context:\n\n';
+
+        if (canvasAssignments && canvasAssignments.length > 0) {
+            context += 'CANVAS ASSIGNMENTS:\n';
+            canvasAssignments.slice(0, 5).forEach((assignment, i) => {
+                const dueDate = assignment.due_at ? new Date(assignment.due_at).toLocaleDateString() : 'No due date';
+                context += `${i + 1}. ${assignment.name || 'Assignment'} - Due: ${dueDate} - Course: ${assignment.context_name || 'Unknown'}\n`;
+            });
+            context += '\n';
+        }
+
+        if (emailSummaries && emailSummaries.length > 0) {
+            context += 'RECENT EMAILS:\n';
+            emailSummaries.slice(0, 3).forEach((email, i) => {
+                context += `${i + 1}. ${email.subject} from ${email.from} - ${email.snippet || 'No preview'}\n`;
+            });
+            context += '\n';
+        }
+
+        if (existingTasks && existingTasks.length > 0) {
+            context += 'EXISTING TASKS:\n';
+            existingTasks.forEach((task, i) => {
+                context += `${i + 1}. ${task.title} - ${task.details}\n`;
+            });
+            context += '\n';
+        }
+
+        const prompt = `${context}
+Please generate 5-8 specific, actionable study tasks or todo items. For each task, provide:
+- A clear, concise title
+- Detailed instructions or steps
+- Priority level (High/Medium/Low)
+- Estimated time to complete
+- Why this task is important based on the context
+
+Format your response as a JSON array of objects with keys: title, details, priority, estimatedTime, importance.
+
+Focus on helping the student stay organized, prepare for upcoming assignments, and maintain good study habits.`;
+
+        const result = await model.generateContent(prompt);
+        const response = await result.response;
+        const text = response.text();
+
+        // Try to parse as JSON, fallback to text processing
+        let tasks = [];
+        try {
+            // Clean up the response to extract JSON
+            const jsonMatch = text.match(/\[[\s\S]*\]/);
+            if (jsonMatch) {
+                tasks = JSON.parse(jsonMatch[0]);
+            } else {
+                throw new Error('No JSON found');
+            }
+        } catch (parseError) {
+            // Fallback: create tasks from text response
+            console.log('Failed to parse Gemini response as JSON, using fallback');
+            tasks = [{
+                title: 'AI Task Generation',
+                details: 'Gemini provided recommendations but response format needs adjustment.',
+                priority: 'Medium',
+                estimatedTime: '15 minutes',
+                importance: 'Review AI suggestions manually'
+            }];
+        }
+
+        res.json({
+            success: true,
+            tasks: tasks,
+            rawResponse: text
+        });
+
+    } catch (error) {
+        console.error('[gemini/generate-tasks]', error.message);
+        res.status(500).json({
+            error: 'Failed to generate AI tasks',
+            details: error.message
+        });
     }
 });
 

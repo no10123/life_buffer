@@ -672,16 +672,87 @@ function renderTodoList() {
     }
 
     todoList.innerHTML = todoGeneratedTasks.map((task, index) => {
-        return `<div class="task-row"><div><strong>${index + 1}. ${task.title}</strong><p>${task.details}</p></div></div>`;
+        const priorityColor = task.priority === 'High' ? 'var(--error)' :
+                             task.priority === 'Medium' ? 'var(--warning)' : 'var(--success)';
+        const priorityIcon = task.priority === 'High' ? 'fa-exclamation-triangle' :
+                            task.priority === 'Medium' ? 'fa-minus' : 'fa-check';
+
+        return `
+            <div class="task-row">
+                <div class="task-header">
+                    <strong>${index + 1}. ${task.title}</strong>
+                    <span class="task-priority" style="color: ${priorityColor};">
+                        <i class="fa-solid ${priorityIcon}"></i> ${task.priority || 'Medium'}
+                    </span>
+                </div>
+                <div class="task-details">
+                    <p>${task.details}</p>
+                    ${task.estimatedTime ? `<p><i class="fa-solid fa-clock"></i> ${task.estimatedTime}</p>` : ''}
+                    ${task.importance ? `<p><i class="fa-solid fa-lightbulb"></i> ${task.importance}</p>` : ''}
+                </div>
+            </div>
+        `;
     }).join('');
 }
 
-function generateAiTasks() {
+async function generateAiTasks() {
     const aiPanel = document.getElementById('ai-agent-output');
+    const button = document.querySelector('button[onclick="generateAiTasks()"]');
 
-    todoGeneratedTasks = [];
+    if (button) {
+        button.disabled = true;
+        button.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Generating...';
+    }
 
-    if (recentTodoCanvasAssignments.length) {
+    try {
+        // Show loading state
+        if (aiPanel) {
+            aiPanel.innerHTML = '<p><i class="fa-solid fa-spinner fa-spin"></i> Analyzing your Canvas assignments and emails...</p>';
+        }
+
+        // Prepare context data
+        const contextData = {
+            canvasAssignments: recentTodoCanvasAssignments.slice(0, 5),
+            emailSummaries: recentEmailSummaries.slice(0, 3),
+            existingTasks: todoGeneratedTasks.filter(task => !task.title.includes('No available context'))
+        };
+
+        // Call Gemini API
+        const response = await fetch('/api/gemini/generate-tasks', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(contextData)
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+            throw new Error(errorData.error || `HTTP ${response.status}`);
+        }
+
+        const result = await response.json();
+
+        // Update tasks with AI-generated ones
+        todoGeneratedTasks = result.tasks || [];
+
+        // Save and render
+        saveTodoTasks();
+        renderTodoList();
+
+        // Update AI panel with success message
+        if (aiPanel) {
+            aiPanel.innerHTML = `
+                <p style="color: var(--success);"><i class="fa-solid fa-check"></i> AI generated ${todoGeneratedTasks.length} personalized tasks!</p>
+                <p style="font-size: 0.9em; color: var(--text-muted);">Based on your Canvas assignments and recent emails.</p>
+            `;
+        }
+
+    } catch (error) {
+        console.error('AI task generation failed:', error);
+
+        // Fallback to manual generation
+        console.log('Falling back to manual task generation');
         const assignments = recentTodoCanvasAssignments.slice(0, 5);
         assignments.forEach((assignment, index) => {
             const dueDate = assignment.due_at ? new Date(assignment.due_at) : null;
@@ -689,35 +760,75 @@ function generateAiTasks() {
             todoGeneratedTasks.push({
                 title: assignment.name || assignment.title || `Assignment ${index + 1}`,
                 details: `From ${assignment.context_name || 'Canvas'}. ${dueText}.`,
+                priority: 'Medium',
+                estimatedTime: '30 minutes',
+                importance: 'Complete this assignment on time'
             });
         });
-    }
 
-    if (recentEmailSummaries.length && todoGeneratedTasks.length < 5) {
-        recentEmailSummaries.slice(0, 3).forEach(email => {
+        if (recentEmailSummaries.length && todoGeneratedTasks.length < 5) {
+            recentEmailSummaries.slice(0, 3).forEach(email => {
+                todoGeneratedTasks.push({
+                    title: `Review email: ${email.subject}`,
+                    details: `From ${email.from}. ${email.snippet || 'Check the message for details.'}`,
+                    priority: 'Low',
+                    estimatedTime: '10 minutes',
+                    importance: 'Stay updated on important communications'
+                });
+            });
+        }
+
+        if (!todoGeneratedTasks.length) {
             todoGeneratedTasks.push({
-                title: `Review email: ${email.subject}`,
-                details: `From ${email.from}. ${email.snippet || 'Check the message for details.'}`,
+                title: 'No available context found.',
+                details: 'Sign in to Google and configure Canvas before generating tasks.',
+                priority: 'Low',
+                estimatedTime: '5 minutes',
+                importance: 'Set up integrations to get AI recommendations'
             });
-        });
-    }
+        }
 
-    if (!todoGeneratedTasks.length) {
-        todoGeneratedTasks.push({ title: 'No available context found.', details: 'Sign in to Google and configure Canvas before generating tasks.' });
-    }
+        saveTodoTasks();
+        renderTodoList();
 
-    saveTodoTasks();
-    renderTodoList();
-
-    if (aiPanel) {
-        aiPanel.innerHTML = '<p>AI generated a task list based on your Canvas and email context. Connect Gemini later to replace this with live recommendations.</p>';
+        if (aiPanel) {
+            aiPanel.innerHTML = `<p style="color: var(--error);"><i class="fa-solid fa-exclamation-triangle"></i> AI generation failed: ${error.message}. Using fallback method.</p>`;
+        }
+    } finally {
+        // Reset button
+        if (button) {
+            button.disabled = false;
+            button.innerHTML = '<i class="fa-solid fa-robot"></i> Generate Tasks with AI';
+        }
     }
 }
 
 function connectAiAgent() {
     const aiPanel = document.getElementById('ai-agent-output');
-    if (aiPanel) {
-        aiPanel.innerHTML = '<p style="color: var(--text-muted);">Gemini integration placeholder active. Actual API connection can be added here later.</p>';
+
+    // Check if Gemini is configured by making a test request
+    fetch('/api/gemini/generate-tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ canvasAssignments: [], emailSummaries: [] })
+    })
+    .then(response => {
+        if (response.status === 503) {
+            throw new Error('Gemini not configured - missing service account key');
+        }
+        return response.json();
+    })
+    .then(() => {
+        if (aiPanel) {
+            aiPanel.innerHTML = '<p style="color: var(--success);"><i class="fa-solid fa-check"></i> Gemini AI is connected and ready!</p>';
+        }
+    })
+    .catch(error => {
+        if (aiPanel) {
+            aiPanel.innerHTML = `<p style="color: var(--error);"><i class="fa-solid fa-exclamation-triangle"></i> Gemini connection failed: ${error.message}</p>`;
+        }
+    });
+}
     }
 }
 
