@@ -5,3 +5,6 @@ config.js
 .DS_Store
 .vscode/
 .idea/
+# Ignore local Google service account credential files
+ai-admin-key.json
+keys/
