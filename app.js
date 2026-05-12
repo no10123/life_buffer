@@ -128,6 +128,15 @@ function getCanvasConfig() {
 }
 
 async function canvasApiRequest(config, path, method = 'GET', body = null) {
+    const requestPayload = {
+        baseUrl: config.baseUrl,
+        accessToken: config.accessToken ? '***REDACTED***' : '',
+        path,
+        method,
+        body
+    };
+    console.log('[Canvas] Sending proxy request:', requestPayload);
+    
     const response = await fetch('/canvas/proxy', {
         method: 'POST',
         headers: {
@@ -137,13 +146,16 @@ async function canvasApiRequest(config, path, method = 'GET', body = null) {
             baseUrl: config.baseUrl,
             accessToken: config.accessToken,
             path,
-            method,
+            method: (method || 'GET').toUpperCase(),
             body
         })
     });
 
+    console.log(`[Canvas] Proxy returned status: ${response.status}`);
+    
     if (!response.ok) {
         const errorText = await response.text().catch(() => '');
+        console.error('[Canvas] Response body:', errorText);
         throw new Error(`Proxy request failed ${response.status}: ${response.statusText}${errorText ? ' - ' + errorText : ''}`);
     }
 

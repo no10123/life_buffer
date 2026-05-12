@@ -263,13 +263,17 @@ app.post('/canvas/proxy', async (req, res) => {
     const { baseUrl, path, accessToken, method = 'GET', body } = req.body;
 
     if (!baseUrl || !path || !accessToken) {
+        console.error('[canvas/proxy] Missing parameters:', { baseUrl: !!baseUrl, path: !!path, accessToken: !!accessToken });
         return res.status(400).json({ error: 'Missing Canvas proxy parameters.' });
     }
 
     try {
         const url = `${baseUrl.replace(/\/$/, '')}${path}`;
         const normalizedMethod = (method || 'GET').toUpperCase();
-        console.log(`[canvas/proxy] ${normalizedMethod} ${url}`);
+        console.log(`[canvas/proxy] Request: ${normalizedMethod} ${url}`);
+        console.log(`[canvas/proxy] Headers: Authorization: Bearer ${accessToken.substring(0, 10)}..., Accept: application/json, Content-Type: application/json`);
+        console.log(`[canvas/proxy] Method received as: "${method}" -> normalized to: "${normalizedMethod}"`);
+        
         const response = await axios({
             url,
             method: normalizedMethod,
@@ -282,14 +286,18 @@ app.post('/canvas/proxy', async (req, res) => {
             validateStatus: () => true
         });
 
-        console.log(`[canvas/proxy] Response status: ${response.status}`);
+        console.log(`[canvas/proxy] Response status: ${response.status} from Canvas API`);
+        console.log(`[canvas/proxy] Response headers:`, { 'content-type': response.headers['content-type'] });
         if (response.headers['content-type']?.includes('application/json')) {
             return res.status(response.status).json(response.data);
         }
 
         res.status(response.status).send(response.data);
     } catch (error) {
-        console.error('[canvas/proxy]', error.message, error.response?.data || '');
+        console.error('[canvas/proxy] ERROR:', error.message);
+        console.error('[canvas/proxy] Error response status:', error.response?.status);
+        console.error('[canvas/proxy] Error response data:', error.response?.data || 'No data');
+        console.error('[canvas/proxy] Error config:', { method: error.config?.method, url: error.config?.url });
         const status = error.response?.status || 500;
         return res.status(status).json({ error: error.message, details: error.response?.data });
     }
