@@ -418,6 +418,27 @@ app.get('/api/pages', (req, res) => {
     });
 });
 
+// ── CANVAS PROXY (add this) ──────────────────
+app.get('/canvas/*', async (req, res) => {
+  const canvasBase = req.headers['x-canvas-url'] || 'https://irvingisd.instructure.com';
+  const token = req.headers['x-canvas-token'];
+  const path = req.params[0];
+  const query = req.url.split('?')[1] || '';
+
+  try {
+    const response = await axios.get(`${canvasBase}/api/v1/${path}${query ? '?' + query : ''}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Accept': 'application/json'
+      }
+    });
+    res.json(response.data);
+  } catch (err) {
+    res.status(err.response?.status || 500).json({ error: [err.me](https://err.me)ssage });
+  }
+});
 // ------------------------------------------------------------------
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`✓ HAC Proxy listening on port ${PORT}`));
+
+    
