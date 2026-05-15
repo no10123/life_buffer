@@ -510,20 +510,25 @@ async function fetchCanvasAssignments(config) {
         const courses = await coursesResponse.json();
         const assignments = [];
 
-        for (const course of courses.slice(0, 10)) {
-            try {
-                const assignmentsResponse = await fetch(`/canvas/courses/${course.id}/assignments?per_page=100`, { headers: { 'x-canvas-url': config.baseUrl, 'x-canvas-token': config.accessToken } });
-                if (!assignmentsResponse.ok) throw new Error(`Failed to fetch assignments for course ${course.name}`);
-                const courseAssignments = await assignmentsResponse.json();
-                courseAssignments.forEach(assignment => {
-                    assignment.context_name = course.name;
-                    assignment.html_url = assignment.html_url || `${config.baseUrl}/courses/${course.id}/assignments/${assignment.id}`;
-                });
-                assignments.push(...courseAssignments);
-            } catch (error) {
-                console.warn(`Failed to fetch assignments for course ${course.name}:`, error);
-            }
-        }
+        // Fetch assignments from all courses in parallel
+        const assignmentPromises = courses.slice(0, 10).map(course =>
+            fetch(`/canvas/courses/${course.id}/assignments?per_page=100`, { headers: { 'x-canvas-url': config.baseUrl, 'x-canvas-token': config.accessToken } })
+                .then(res => res.ok ? res.json() : [])
+                .then(courseAssignments => {
+                    courseAssignments.forEach(assignment => {
+                        assignment.context_name = course.name;
+                        assignment.html_url = assignment.html_url || `${config.baseUrl}/courses/${course.id}/assignments/${assignment.id}`;
+                    });
+                    return courseAssignments;
+                })
+                .catch(error => {
+                    console.warn(`Failed to fetch assignments for course ${course.name}:`, error);
+                    return [];
+                })
+        );
+
+        const allAssignments = await Promise.all(assignmentPromises);
+        allAssignments.forEach(courseAssignments => assignments.push(...courseAssignments));
 
         const now = new Date();
         const upcomingAssignments = assignments
