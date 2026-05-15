@@ -258,8 +258,14 @@ try {
         if (fs.existsSync(keyPath)) {
             const keyData = JSON.parse(fs.readFileSync(keyPath, 'utf8'));
             const key = keyData.api_key || keyData.private_key || keyData;
-            genAI = new GoogleGenerativeAI(key);
-            console.log('✓ Gemini AI client initialized from ai-admin-key.json');
+            if (!key || key.includes('PASTE_YOUR')) {
+                console.log('⚠ Gemini API key placeholder found - AI features disabled');
+                console.log('  Replace PASTE_YOUR_GEMINI_API_KEY_HERE with your actual API key');
+                genAI = null;
+            } else {
+                genAI = new GoogleGenerativeAI(key);
+                console.log('✓ Gemini AI client initialized from ai-admin-key.json');
+            }
         } else {
             console.log('⚠ Gemini key file not found - AI features will be disabled');
             console.log('  Create ai-admin-key.json with your API key, or set GEMINI_API_KEY environment variable');
@@ -267,6 +273,7 @@ try {
     }
 } catch (error) {
     console.error('Error initializing Gemini client:', error.message);
+    genAI = null;
 }
 
 app.post('/canvas/proxy', async (req, res) => {
@@ -314,8 +321,9 @@ app.post('/canvas/proxy', async (req, res) => {
 });
 
 app.post('/api/gemini/generate-tasks', async (req, res) => {
+    console.log('[gemini-endpoint] genAI is:', genAI ? 'initialized' : 'null');
     if (!genAI) {
-        return res.status(503).json({ error: 'Gemini AI not configured. Please add ai-admin-key.json file.' });
+        return res.status(503).json({ error: 'Gemini AI not configured. Check server logs for details.' });
     }
 
     const { canvasAssignments, emailSummaries, existingTasks } = req.body;
