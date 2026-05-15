@@ -420,7 +420,7 @@ app.get('/api/pages', (req, res) => {
 
 // ── CANVAS PROXY (add this) ──────────────────
 app.get(/^\/canvas\/(.*)$/, async (req, res) => {
-  const canvasBase = req.headers['x-canvas-url'] || 'https://irvingisd.instructure.com';
+  const canvasBase = req.headers['x-canvas-url'] || 'https://learn.irvingisd.net';
   const token = req.headers['x-canvas-token'];
   const path = req.params[0];
   const query = req.url.split('?')[1] || '';
