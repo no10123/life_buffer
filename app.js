@@ -63,8 +63,7 @@ function applySavedSettings() {
 
 // Canvas Settings Functions
 function initCanvasSettings() {
-    const defaultCanvasUrl = 'https://irvingisd.instructure.com';
-    const baseUrl = localStorage.getItem('canvasBaseUrl') || defaultCanvasUrl;
+    const baseUrl = localStorage.getItem('canvasBaseUrl') || 'https://learn.irvingisd.net';
     const accessToken = localStorage.getItem('canvasAccessToken') || '';
 
     document.getElementById('canvas-base-url').value = baseUrl;
@@ -72,7 +71,7 @@ function initCanvasSettings() {
 }
 
 function updateCanvasSettings() {
-    const baseUrl = document.getElementById('canvas-base-url').value || 'https://irvingisd.instructure.com';
+    const baseUrl = document.getElementById('canvas-base-url').value;
     const accessToken = document.getElementById('canvas-access-token').value;
 
     localStorage.setItem('canvasBaseUrl', baseUrl);
@@ -83,7 +82,7 @@ async function testCanvasConnection() {
     const testBtn = document.getElementById('test-canvas-btn');
     const resultDiv = document.getElementById('canvas-test-result');
 
-    const baseUrl = document.getElementById('canvas-base-url').value || 'https://irvingisd.instructure.com';
+    const baseUrl = document.getElementById('canvas-base-url').value;
     const accessToken = document.getElementById('canvas-access-token').value;
 
     if (!baseUrl || !accessToken) {
@@ -128,15 +127,6 @@ function getCanvasConfig() {
 }
 
 async function canvasApiRequest(config, path, method = 'GET', body = null) {
-    const requestPayload = {
-        baseUrl: config.baseUrl,
-        accessToken: config.accessToken ? '***REDACTED***' : '',
-        path,
-        method,
-        body
-    };
-    console.log('[Canvas] Sending proxy request:', requestPayload);
-    
     const response = await fetch('/canvas/proxy', {
         method: 'POST',
         headers: {
@@ -146,16 +136,13 @@ async function canvasApiRequest(config, path, method = 'GET', body = null) {
             baseUrl: config.baseUrl,
             accessToken: config.accessToken,
             path,
-            method: (method || 'GET').toUpperCase(),
+            method,
             body
         })
     });
 
-    console.log(`[Canvas] Proxy returned status: ${response.status}`);
-    
     if (!response.ok) {
         const errorText = await response.text().catch(() => '');
-        console.error('[Canvas] Response body:', errorText);
         throw new Error(`Proxy request failed ${response.status}: ${response.statusText}${errorText ? ' - ' + errorText : ''}`);
     }
 
