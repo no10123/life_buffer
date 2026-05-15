@@ -246,14 +246,24 @@ const { GoogleGenerativeAI } = require('@google/generative-ai');
 // Initialize Gemini client
 let genAI = null;
 try {
-    // Try to load service account key
-    const keyPath = path.join(__dirname, 'ai-admin-key.json');
-    if (fs.existsSync(keyPath)) {
-        const keyData = JSON.parse(fs.readFileSync(keyPath, 'utf8'));
-        genAI = new GoogleGenerativeAI(keyData.private_key);
-        console.log('✓ Gemini AI client initialized');
+    // Try to load from environment variable first
+    const apiKey = process.env.GEMINI_API_KEY;
+    
+    if (apiKey) {
+        genAI = new GoogleGenerativeAI(apiKey);
+        console.log('✓ Gemini AI client initialized from GEMINI_API_KEY');
     } else {
-        console.log('⚠ Gemini key file not found - AI features will be disabled');
+        // Try to load from ai-admin-key.json file
+        const keyPath = path.join(__dirname, 'ai-admin-key.json');
+        if (fs.existsSync(keyPath)) {
+            const keyData = JSON.parse(fs.readFileSync(keyPath, 'utf8'));
+            const key = keyData.api_key || keyData.private_key || keyData;
+            genAI = new GoogleGenerativeAI(key);
+            console.log('✓ Gemini AI client initialized from ai-admin-key.json');
+        } else {
+            console.log('⚠ Gemini key file not found - AI features will be disabled');
+            console.log('  Create ai-admin-key.json with your API key, or set GEMINI_API_KEY environment variable');
+        }
     }
 } catch (error) {
     console.error('Error initializing Gemini client:', error.message);
