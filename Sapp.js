@@ -184,7 +184,7 @@ async function loadPage(pageName, btn) {
     if (!container) return;
 
     if (!pageCache[pageName]) {
-        const response = await fetch(`pages/${pageName}.html`);
+        const response = await fetch(`Spages/${pageName}.html`);
         pageCache[pageName] = await response.text();
     }
     container.innerHTML = pageCache[pageName];
