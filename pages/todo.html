@@ -4,7 +4,7 @@
         <p>Generate personalized tasks from your Canvas assignments, Gmail context, and AI recommendations.</p>
         <div class="todo-actions">
             <button onclick="generateAiTasks()" class="primary-btn"><i class="fa-solid fa-robot"></i> Generate Tasks with AI</button>
-            <button onclick="connectAiAgent()" class="secondary-btn"><i class="fa-solid fa-link"></i> Connect Gemini</button>
+            <button onclick="connectAiAgent()" id="connect-gemini-btn" class="secondary-btn"><i class="fa-solid fa-link"></i> Connect Gemini</button>
         </div>
     </header>
 
@@ -15,7 +15,6 @@
                 <p>AI-generated tasks will appear here based on your Canvas and email context.</p>
                 <div id="todo-list" class="todo-list"></div>
             </div>
-
             <div class="card">
                 <h3>Starred Assignments</h3>
                 <p>Keep your most important Canvas work front and center.</p>
@@ -29,12 +28,10 @@
                 <p>Use this panel to see how the assistant is interpreting your current Canvas and Gmail context.</p>
                 <div id="ai-agent-output" class="ai-output"></div>
             </div>
-
             <div class="card">
                 <h3>Canvas Context</h3>
                 <div id="canvas-context" class="context-list"></div>
             </div>
-
             <div class="card">
                 <h3>Email Context</h3>
                 <div id="email-context" class="context-list"></div>
@@ -42,3 +39,144 @@
         </aside>
     </div>
 </section>
+
+<script>
+const DEMO_COURSES = [
+  { name: "AP Computer Science A", teacher: "Mr. Thompson", period: "2nd", average: "94" },
+  { name: "AP English Language",   teacher: "Ms. Rivera",   period: "3rd", average: "88" },
+  { name: "Pre-Calculus",          teacher: "Mr. Patel",    period: "4th", average: "91" },
+  { name: "AP World History",      teacher: "Ms. Johnson",  period: "5th", average: "85" },
+  { name: "Chemistry",             teacher: "Dr. Williams", period: "6th", average: "90" },
+];
+
+const DEMO_TASKS = [
+  { title: "Finish AP CS Arrays Lab", details: "Complete ArrayLab3.java — focus on the sorting section. Due tomorrow.", priority: "High", estimatedTime: "45 min", importance: "Worth 20% of unit grade", course: "AP Computer Science A" },
+  { title: "Read AP English Ch. 7–9", details: "Annotate for rhetorical devices. Quiz on Friday covers these chapters.", priority: "High", estimatedTime: "1 hr", importance: "Quiz is 15% of semester grade", course: "AP English Language" },
+  { title: "Pre-Calc Problem Set 12", details: "Problems 1–30 on trigonometric identities. Show all work for full credit.", priority: "Medium", estimatedTime: "30 min", importance: "Homework counts toward participation grade", course: "Pre-Calculus" },
+  { title: "AP World History Essay Outline", details: "Draft a DBQ outline for the Industrial Revolution prompt. Use at least 4 documents.", priority: "Medium", estimatedTime: "40 min", importance: "Essay due next Monday — outlining now saves time", course: "AP World History" },
+  { title: "Chemistry Lab Report", details: "Write up the titration lab. Include data table, error analysis, and conclusion.", priority: "Low", estimatedTime: "1 hr", importance: "Due end of week — get ahead of it", course: "Chemistry" },
+];
+
+const DEMO_STARRED = [
+  { name: "ArrayLab3.java",       course: "AP Computer Science A", due: "Tomorrow"   },
+  { name: "DBQ Essay Draft",      course: "AP World History",      due: "Mon May 18" },
+  { name: "Titration Lab Report", course: "Chemistry",             due: "Fri May 16" },
+];
+
+const DEMO_CANVAS_CONTEXT = [
+  { name: "ArrayLab3.java",      due: "Tomorrow", course: "AP CS A"        },
+  { name: "Trig Problem Set 12", due: "May 16",   course: "Pre-Calculus"   },
+  { name: "Titration Lab Report",due: "May 16",   course: "Chemistry"      },
+  { name: "Ch. 7-9 Annotation",  due: "May 19",   course: "AP English"     },
+  { name: "DBQ Essay Draft",     due: "May 18",   course: "AP World History"},
+];
+
+const DEMO_EMAIL_CONTEXT = [
+  { subject: "Canvas: ArrayLab3 graded",       from: "Mr. Thompson", snippet: "Great work on the loops section..." },
+  { subject: "Reminder: AP Exam Registration", from: "Counselor",    snippet: "Deadline to register is May 20..." },
+  { subject: "Study group tonight @ 7pm",      from: "classmate",    snippet: "Library room 204, bring your calc notes" },
+];
+
+const PRIORITY_COLORS = {
+  High:   { bg: "#fee2e2", color: "#dc2626", border: "#fca5a5" },
+  Medium: { bg: "#fef9c3", color: "#ca8a04", border: "#fde68a" },
+  Low:    { bg: "#dcfce7", color: "#16a34a", border: "#86efac" },
+};
+
+function connectAiAgent() {
+  const btn = document.getElementById('connect-gemini-btn');
+  const aiPanel = document.getElementById('ai-agent-output');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Connecting...';
+  aiPanel.innerHTML = '<p style="color:#888;"><i class="fa-solid fa-spinner fa-spin"></i> Authenticating with Gemini...</p>';
+  setTimeout(() => { aiPanel.innerHTML = '<p style="color:#888;"><i class="fa-solid fa-spinner fa-spin"></i> Loading Canvas context...</p>'; }, 700);
+  setTimeout(() => { aiPanel.innerHTML = '<p style="color:#888;"><i class="fa-solid fa-spinner fa-spin"></i> Analyzing assignments...</p>'; }, 1400);
+  setTimeout(() => {
+    btn.innerHTML = '<i class="fa-solid fa-circle-check"></i> Gemini Connected';
+    btn.style.background = '#16a34a';
+    btn.style.color = '#fff';
+    btn.style.borderColor = 'transparent';
+    aiPanel.innerHTML = `
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+        <i class="fa-solid fa-circle-check" style="color:#16a34a;font-size:1.2rem;"></i>
+        <strong style="color:#16a34a;">Gemini AI is connected and ready!</strong>
+      </div>
+      <p style="font-size:0.85rem;color:#555;margin-bottom:8px;">
+        Detected <strong>${DEMO_COURSES.length} courses</strong> and <strong>${DEMO_CANVAS_CONTEXT.length} upcoming assignments</strong>.
+        Click <em>Generate Tasks with AI</em> to build your study plan.
+      </p>
+      <div style="font-size:0.8rem;color:#888;">
+        ${DEMO_COURSES.map(c => `<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid #f0f0f0;"><span>${c.name}</span><span style="color:#16a34a;font-weight:bold;">${c.average}%</span></div>`).join('')}
+      </div>`;
+    renderCanvasContext();
+    renderEmailContext();
+    renderStarredAssignments();
+  }, 2200);
+}
+
+function generateAiTasks() {
+  const todoList = document.getElementById('todo-list');
+  const aiPanel = document.getElementById('ai-agent-output');
+  todoList.innerHTML = '<p style="color:#888;padding:12px;"><i class="fa-solid fa-spinner fa-spin"></i> Gemini is analyzing your assignments...</p>';
+  if (aiPanel) aiPanel.innerHTML = '<div style="display:flex;align-items:center;gap:8px;"><i class="fa-solid fa-spinner fa-spin" style="color:#888;"></i><span style="color:#888;font-size:0.85rem;">Generating personalized study plan...</span></div>';
+  setTimeout(() => {
+    renderTodoList();
+    if (aiPanel) aiPanel.innerHTML = `<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;"><i class="fa-solid fa-circle-check" style="color:#16a34a;font-size:1.1rem;"></i><strong style="color:#16a34a;">Tasks generated!</strong></div><p style="font-size:0.82rem;color:#555;">Created ${DEMO_TASKS.length} tasks based on your upcoming deadlines and course averages.</p>`;
+  }, 1800);
+}
+
+function renderTodoList() {
+  const container = document.getElementById('todo-list');
+  if (!container) return;
+  container.innerHTML = DEMO_TASKS.map((task, i) => {
+    const p = PRIORITY_COLORS[task.priority] || PRIORITY_[COLORS.Me](https://COLORS.Me)dium;
+    return `<div style="border:1px solid #e5e7eb;border-radius:10px;padding:14px 16px;margin-bottom:10px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,0.06);">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
+        <div style="flex:1;">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+            <span style="background:${p.bg};color:${p.color};border:1px solid ${p.border};font-size:0.7rem;font-weight:700;padding:2px 8px;border-radius:999px;text-transform:uppercase;">${task.priority}</span>
+            <span style="font-size:0.75rem;color:#9ca3af;">${task.course}</span>
+          </div>
+          <strong style="font-size:0.95rem;color:#111;">${task.title}</strong>
+          <p style="font-size:0.83rem;color:#555;margin:4px 0 0;">${task.details}</p>
+        </div>
+        <div style="font-size:0.75rem;color:#6b7280;white-space:nowrap;"><i class="fa-regular fa-clock"></i> ${task.estimatedTime}</div>
+      </div>
+      <div style="margin-top:8px;font-size:0.78rem;color:#9ca3af;border-top:1px solid #f3f4f6;padding-top:6px;">
+        <i class="fa-solid fa-lightbulb" style="color:#f59e0b;"></i> ${task.importance}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderStarredAssignments() {
+  const container = document.getElementById('starred-assignments');
+  if (!container) return;
+  container.innerHTML = DEMO_STARRED.map(a => `
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border:1px solid #fde68a;border-radius:8px;background:#fffbeb;margin-bottom:8px;">
+      <div><strong style="font-size:0.88rem;color:#111;">${a.name}</strong><div style="font-size:0.75rem;color:#9ca3af;">${a.course}</div></div>
+      <span style="font-size:0.75rem;color:#d97706;font-weight:600;"><i class="fa-solid fa-star"></i> Due ${a.due}</span>
+    </div>`).join('');
+}
+
+function renderCanvasContext() {
+  const container = document.getElementById('canvas-context');
+  if (!container) return;
+  container.innerHTML = DEMO_CANVAS_CONTEXT.map(a => `
+    <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #f3f4f6;font-size:0.82rem;">
+      <span style="color:#374151;">${a.name}</span>
+      <span style="color:#6b7280;margin-left:8px;">${a.due}</span>
+    </div>`).join('');
+}
+
+function renderEmailContext() {
+  const container = document.getElementById('email-context');
+  if (!container) return;
+  container.innerHTML = DEMO_EMAIL_CONTEXT.map(e => `
+    <div style="padding:8px 0;border-bottom:1px solid #f3f4f6;">
+      <div style="font-size:0.82rem;font-weight:600;color:#374151;">${e.subject}</div>
+      <div style="font-size:0.75rem;color:#9ca3af;">from ${e.from}</div>
+      <div style="font-size:0.78rem;color:#6b7280;margin-top:2px;">${e.snippet}</div>
+    </div>`).join('');
+}
+</script>
