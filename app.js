@@ -100,7 +100,12 @@ async function testCanvasConnection() {
 
     try {
         const testConfig = { baseUrl, accessToken };
-        const userData = await fetch('/canvas/users/self/profile', { headers: { 'x-canvas-url': testConfig.baseUrl, 'x-canvas-token': testConfig.accessToken } }).then(r => r.json());
+        const response = await fetch('/canvas/users/self/profile', { headers: { 'x-canvas-url': testConfig.baseUrl, 'x-canvas-token': testConfig.accessToken } });
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ error: response.statusText }));
+            throw new Error(errorData.error || `HTTP ${response.status}`);
+        }
+        const userData = await response.json();
 
         resultDiv.style.display = 'block';
         resultDiv.style.background = '#efe';
@@ -497,12 +502,19 @@ async function loadCanvasData() {
 
 async function fetchCanvasAssignments(config) {
     try {
-        const courses = await fetch('/canvas/courses?enrollment_state=active&per_page=50', { headers: { 'x-canvas-url': config.baseUrl, 'x-canvas-token': config.accessToken } }).then(r => r.json());
+        const coursesResponse = await fetch('/canvas/courses?enrollment_state=active&per_page=50', { headers: { 'x-canvas-url': config.baseUrl, 'x-canvas-token': config.accessToken } });
+        if (!coursesResponse.ok) {
+            const errorData = await coursesResponse.json().catch(() => ({ error: coursesResponse.statusText }));
+            throw new Error(errorData.error || `HTTP ${coursesResponse.status}`);
+        }
+        const courses = await coursesResponse.json();
         const assignments = [];
 
         for (const course of courses.slice(0, 10)) {
             try {
-                const courseAssignments = await fetch(`/canvas/courses/${course.id}/assignments?per_page=100`, { headers: { 'x-canvas-url': config.baseUrl, 'x-canvas-token': config.accessToken } }).then(r => r.json());
+                const assignmentsResponse = await fetch(`/canvas/courses/${course.id}/assignments?per_page=100`, { headers: { 'x-canvas-url': config.baseUrl, 'x-canvas-token': config.accessToken } });
+                if (!assignmentsResponse.ok) throw new Error(`Failed to fetch assignments for course ${course.name}`);
+                const courseAssignments = await assignmentsResponse.json();
                 courseAssignments.forEach(assignment => {
                     assignment.context_name = course.name;
                     assignment.html_url = assignment.html_url || `${config.baseUrl}/courses/${course.id}/assignments/${assignment.id}`;
@@ -524,7 +536,12 @@ async function fetchCanvasAssignments(config) {
     } catch (error) {
         console.warn('Failed to fetch assignments from courses, trying planner items:', error);
 
-        const plannerItems = await fetch(`/canvas/planner/items?start_date=${new Date().toISOString().split('T')[0]}&per_page=50`, { headers: { 'x-canvas-url': config.baseUrl, 'x-canvas-token': config.accessToken } }).then(r => r.json());
+        const plannerResponse = await fetch(`/canvas/planner/items?start_date=${new Date().toISOString().split('T')[0]}&per_page=50`, { headers: { 'x-canvas-url': config.baseUrl, 'x-canvas-token': config.accessToken } });
+        if (!plannerResponse.ok) {
+            const errorData = await plannerResponse.json().catch(() => ({ error: plannerResponse.statusText }));
+            throw new Error(errorData.error || `HTTP ${plannerResponse.status}`);
+        }
+        const plannerItems = await plannerResponse.json();
 
         const assignments = plannerItems
             .filter(item => item.plannable_type === 'assignment' && item.plannable)
