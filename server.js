@@ -419,7 +419,7 @@ app.get('/api/pages', (req, res) => {
 });
 
 // ── CANVAS PROXY (add this) ──────────────────
-app.get('/canvas/*', async (req, res) => {
+app.get(/^\/canvas\/(.*)$/, async (req, res) => {
   const canvasBase = req.headers['x-canvas-url'] || 'https://irvingisd.instructure.com';
   const token = req.headers['x-canvas-token'];
   const path = req.params[0];
@@ -434,7 +434,7 @@ app.get('/canvas/*', async (req, res) => {
     });
     res.json(response.data);
   } catch (err) {
-    res.status(err.response?.status || 500).json({ error: [err.me](https://err.me)ssage });
+    res.status(err.response?.status || 500).json({ error: err.message });
   }
 });
 // ------------------------------------------------------------------
