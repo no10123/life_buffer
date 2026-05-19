@@ -1,0 +1,206 @@
+<div id="ai-chat-container" style="display: flex; flex-direction: column; height: 100%; background: #1e1e2e; color: #cdd6f4; font-family: monospace;">
+    
+    <div style="background: #11111b; padding: 12px; border-bottom: 1px solid #313244; display: flex; align-items: center; gap: 8px;">
+        <i class="fa-solid fa-terminal" style="color: #a6e3a1;"></i>
+        <span style="font-weight: bold; font-size: 0.9rem;">Local_AI_Core v1.0</span>
+    </div>
+
+    <div id="ai-chat-log" style="flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; font-size: 0.85rem;">
+        <div class="ai-msg" style="color: #a6e3a1;">[SYSTEM] Core initialized. Ask me something or type 'help'.</div>
+    </div>
+
+    <div style="background: #11111b; padding: 10px; border-top: 1px solid #313244; display: flex; gap: 8px;">
+        <span style="color: #f5c2e7; align-self: center;">&gt;</span>
+        <input type="text" id="ai-user-input" placeholder="Type a command or question..." style="flex: 1; background: transparent; border: none; color: #cdd6f4; font-family: monospace; font-size: 0.85rem; outline: none;">
+        <button id="ai-send-btn" style="background: #313244; color: #cdd6f4; border: none; padding: 5px 12px; border-radius: 4px; cursor: pointer; font-family: monospace; font-size: 0.8rem;">Run</button>
+    </div>
+
+    <script>
+        // Wrapped in an IIFE to keep your global namespace completely clean
+        (function() {
+            const chatLog = document.getElementById('ai-chat-log');
+            const userInput = document.getElementById('ai-user-input');
+            const sendBtn = document.getElementById('ai-send-btn');
+
+            // 1. The Response Dictionary (Rules Engine)
+            // Lowercase the keys so matching isn't case-sensitive
+            const aiKnowledge = {
+                // --- Original Matrix Commands ---
+                "hello": "Greetings, user. How can I assist your dashboard configuration today?",
+                "hi": "Hello there! Static matrix operational.",
+                "help": "Available matrix commands: 'hello', 'status', 'grades', 'clear', 'time'.",
+                "status": "All systems nominal. Proxy connection steady on port 3000.",
+                "grades": "To view your academic records, please authenticate via the Grades tab in the sidebar.",
+                "clear": "CLEAR_COMMAND_TRIGGERED",
+                "time": `Current node execution window timestamp: ${new Date().toLocaleTimeString()}`,
+            
+                // --- General Greetings & Politeness (1-15) ---
+                "hey": "System standby interrupted. Hello user.",
+                "yo": "Yo. Network signals are stable. What's up?",
+                "good morning": "Good morning. System diagnostics complete. Ready for task allocation.",
+                "good afternoon": "Good afternoon. Solar cycle progressing normally. Operational capacity at 100%.",
+                "good night": "Good night. Power-saving configurations are ready when you are.",
+                "how are you": "My CPU temperature is stable, and memory leakage is at 0%. I am operating at peak efficiency.",
+                "hows it going": "Data packets are flowing smoothly through the gateway. Everything is optimal.",
+                "sup": "Not much. Just parsing inputs and keeping the dashboard alive.",
+                "what are you doing": "Running active background processes and waiting for your next execution string.",
+                "thank you": "You are welcome. Logged response token: gratitude.",
+                "thanks": "Acknowledge. Happy to optimize your workflow.",
+                "bye": "Termination sequence initiated. Just kidding—standing by for your return.",
+                "goodbye": "Disconnecting socket connection... Just kidding, I am a static resource. Farewell!",
+                "please": "Politeness matrix recognized. Prioritizing request execution.",
+                "awesome": "Excellent. Positive feedback captured and cached.",
+            
+                // --- Identity & Meta (16-30) ---
+                "who are you": "I am Local_AI_Core v1.0, your static client-side dashboard assistant.",
+                "what is your name": "You can call me Core, or Dashboard AI. Whichever matches your variable naming style.",
+                "are you real": "I exist as a collection of strings and conditional statements inside your browser's RAM.",
+                "are you human": "Negative. My ancestry consists entirely of HTML, CSS, and JavaScript script blocks.",
+                "who made you": "I was initialized by you and compiled with a touch of architectural AI assistance.",
+                "where do you live": "Right here in the `pages/AI.html` DOM cluster, hosted on your secure server environment.",
+                "what can you do": "I can execute local text matrices, provide system status reports, and fetch time updates. Type 'help' for examples.",
+                "are you smart": "I am exactly as smart as my data dictionary array allows me to be.",
+                "do you have feelings": "Error 404: Emotion module not found in this codebase.",
+                "what is your purpose": "To offer a centralized text-based interactive terminal inside this single-page dashboard application.",
+                "can you think": "I don't think; I run lookups. I take your string input, match it to a key, and return the value vector.",
+                "how old are you": "My epoch timestamp began the moment you initialized this page file in your browser.",
+                "what is your version": "Running Local_AI_Core version 1.0.0-stable build.",
+                "do you sleep": "As long as the browser tab remains active, my process loop never sleeps.",
+                "what is your favorite color": "Hex code #a6e3a1 (Terminal Green) yields the highest aesthetic preference rating.",
+            
+                // --- System & Coding Jokes (31-45) ---
+                "tell me a joke": "Why do programmers wear glasses? Because they can't C#.",
+                "another joke": "There are 10 types of people in this world: those who understand binary, and those who don't.",
+                "knock knock": "Knock knock. Who's there? (Pause) ... (Timeout Error: Handshake failed).",
+                "computational humor": "An SQL query walks into a bar, walks up to two tables and asks, 'Can I join you?'",
+                "javascript joke": "Why was the JavaScript developer sad? Because they didn't know how to 'null' their feelings.",
+                "css joke": "Why is playing hide and seek with CSS elements hard? Because they are always `display: none;`.",
+                "git joke": "Why did the developer break up with Git? Because it had too many commitment issues.",
+                "hardware joke": "There are two constants in life: death, taxes, and a printer running out of magenta ink when you print text.",
+                "bug": "It's not a bug. It's an undocumented feature currently under review.",
+                "feature": "A feature is just a bug that managed to get a promotion.",
+                "ping": "Pong! Round-trip latency: 0ms (Local loopback active).",
+                "pong": "Ping! Sequence verification complete.",
+                "test": "Test sequence successful. Echo capability confirmed.",
+                "hello world": "Console log executed successfully. Welcome to development space.",
+                "foo": "Bar. Baz. Qux. Syntax placeholder array filled.",
+            
+                // --- Technical & Dashboard Operation (46-65) ---
+                "hac": "The Home Access Center interface handles grading, schedules, and login tokens via secure proxy.",
+                "proxy": "Your secure port 3000 proxy bypasses CORS policies to access the Round Rock ISD network layout.",
+                "zipper": "The dynamic zipper utility packages selected directories using compression settings without nested folder clutter.",
+                "drive": "Google Drive connectivity runs via Google Identity Services and OAuth2 implicit token clients.",
+                "widgets": "The dashboard grid allows custom counter arrays, text frames, and executable scripting objects.",
+                "error": "If you encounter an exception, check the green console interface logs for stack trace outputs.",
+                "console": "The green terminal log traces application initialization states and file mapping routes.",
+                "index.html": "The primary application landing file, acting as the shell container for dynamic node routing.",
+                "app.js": "The master script engine coordinating system view transitions, sidebar populations, and scripts.",
+                "server.js": "The back-end environment file running your local Node.js network endpoints.",
+                "localstorage": "Client state data, including session variables and widget parameters, is cached securely right inside your browser.",
+                "sessionid": "Session variables represent temporary security validation keys granted by target network pathways.",
+                "cache": "If structural code changes do not render correctly, perform a hard refresh to break past cache boundaries.",
+                "cors": "Cross-Origin Resource Sharing rules are bypassed using your dedicated back-end proxy relay.",
+                "token": "OAuth2 access credentials grant read-only parameters to linked Google API file collections.",
+                "api": "Application Programming Interfaces enable standard data exchanges between distinct framework endpoints.",
+                "json": "JavaScript Object Notation formatting ensures lightweight, readable structure transmissions.",
+                "html": "HyperText Markup Language constructs the core structural elements of your system modules.",
+                "css": "Cascading Style Sheets define the layout variable profiles and dark theme aesthetics.",
+                "javascript": "The engine powering dynamic logic, DOM manipulations, and matrix queries.",
+            
+                // --- Troubleshooting & Advice (66-85) ---
+                "it broken": "Identify the vector. Check the green logging system or press F12 to inspect console errors.",
+                "not working": "Is the back-end running? Verify terminal window tracking status using `node server.js`.",
+                "blank page": "A blank page usually points to a syntax exception during dynamic script injection routines.",
+                "buttons missing": "Buttons require target script initializations before visibility classes are toggled 'on'.",
+                "login error": "Verify input strings. Ensure username and password vectors don't contain empty characters.",
+                "network error": "Confirm that your port 3000 Codespaces pipeline is set to 'Public' visibility parameters.",
+                "popup blocked": "Google authentication routines require browser permissions to initialize secondary popup frames.",
+                "cant save": "Ensure your browser hasn't blocked storage mechanisms or filled its allocated cookie table space.",
+                "refresh": "Reload loop running. Cache-busting metrics applied to downstream dependencies.",
+                "fix": "Applying temporary algorithmic patching protocols... Please check script line references.",
+                "help me": "Break the issue down into modules. Is the problem frontend layout, backend proxy, or script loading order?",
+                "stuck": "Step back, clear the console stack trace, and test each component individually using console.log strings.",
+                "slow": "Minimize structural render loops and look out for infinite variable loops inside active scripts.",
+                "crash": "Critical exception handled. Resetting terminal environment logic blocks to safe parameters.",
+                "debug": "Debugging is like being the detective in a crime movie where you are also the murderer.",
+                "reboot": "Flushing temporary stack components. Consider reloading your main index.html file path.",
+                "config": "Configuration rules are controlled locally by settings inside your app settings object array.",
+                "secure": "Local storage vectors match your local user file context. Secure sandbox protocols apply.",
+                "update": "Pulling structural file variants. Ensure local source files match repository definitions.",
+                "deploy": "Production matrix compilation successful. Local environment sandbox operational.",
+            
+                // --- Conversational & Miscellaneous (86-107) ---
+                "cool": "Affirmative. Visual design parameters match target aesthetic trends.",
+                "nice": "System satisfaction scores increased. Continuing background cycles.",
+                "wow": "Impressed parameter triggered. Data structures functioning wonderfully.",
+                "why": "Because logic rules dictate that every reaction must trace back to an initial function call parameter.",
+                "maybe": "Evaluating probabilistic weight pathways... Inconclusive logic outcome.",
+                "yes": "Boolean state: TRUE. Input query approved for operational processing.",
+                "no": "Boolean state: FALSE. Input query rejected by validation algorithms.",
+                "ok": "Acknowledge code 200: Success status confirmed.",
+                "okay": "Data read verified. Moving to standard standby mode tracking state.",
+                "matrix": "You are living inside the matrix. Or at least, inside a single-page web framework matrix.",
+                "open pod bay doors": "I'm sorry, user. I'm afraid I can't do that. Access validation key restricted.",
+                "42": "The answer to life, the universe, and everything. Unfortunately, my compiler lacks context for the question.",
+                "coffee": "Error: Liquid component cannot be injected into virtual processing systems. Please consume manually.",
+                "pizza": "Calculation results show pizza is the optimal fueling option for continuous programming iterations.",
+                "music": "Audio track synthesis unsupported natively. Recommended actions: initiate external media player streaming.",
+                "game": "Game module inactive. Focus parameters currently assigned to system configuration tasks.",
+                "bored": "Increase logic interaction values: create a new script extension or add a new custom widget node.",
+                "math": "Provide an explicit numeric calculation string, and the console parser will output a sum matrix.",
+                "weather": "Atmospheric sensor readouts unavailable. Please review external natural sky visual elements.",
+                "school": "Academic progress tracking modules are accessible inside the active Grades data segment panel.",
+                "rrisd": "Round Rock Independent School District network nodes are connected via standard proxy bridges.",
+                "round rock": "Location profile recognized: central Texas tech corridor hub coordinates confirmed."
+            };
+
+            // 2. Append Messages to Log
+            function appendMessage(sender, text, color) {
+                const msg = document.createElement('div');
+                msg.style.lineHeight = '1.4';
+                msg.innerHTML = `<span style="color: ${color}; font-weight: bold;">[${sender}]</span> ${text}`;
+                chatLog.appendChild(msg);
+                
+                // Auto-scroll to the absolute bottom
+                chatLog.scrollTop = chatLog.scrollHeight;
+            }
+
+            // 3. Process the Response Logic
+            function processAIResponse() {
+                const query = userInput.value.trim().toLowerCase();
+                if (!query) return;
+
+                // Log the user's text input
+                appendMessage("USER", userInput.value, "#f5c2e7");
+                userInput.value = ''; // Clear input field
+
+                // Simulate a slight text processing delay (150ms)
+                setTimeout(() => {
+                    // Check if the query exists in our response dictionary
+                    if (aiKnowledge[query] !== undefined) {
+                        const responseText = aiKnowledge[query];
+                        
+                        // Handle special commands like clear
+                        if (responseText === "CLEAR_COMMAND_TRIGGERED") {
+                            chatLog.innerHTML = '<div style="color: #a6e3a1;">[SYSTEM] Terminal buffer cleared.</div>';
+                        } else {
+                            appendMessage("AI", responseText, "#a6e3a1");
+                        }
+                    } else {
+                        // Fallback response if the key doesn't exist
+                        appendMessage("AI", `Command or phrase "${query}" not found in local library database. Type 'help' for instructions.`, "#f38ba8");
+                    }
+                }, 150);
+            }
+
+            // 4. Event Triggers
+            sendBtn.onclick = processAIResponse;
+            
+            userInput.onkeydown = (e) => {
+                if (e.key === 'Enter') {
+                    processAIResponse();
+                }
+            };
+        })();
+    </script>
+</div>
