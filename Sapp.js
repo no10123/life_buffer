@@ -177,6 +177,23 @@ function applySavedSettings() {
 // ==========================================
 const pageCache = {};
 
+// ── STATIC PAGES LIST ────────────────────────────────────────────────
+// Pages listed here will be loaded from Spages/ instead of pages/.
+// To add a new static page: drop the .html file in Spages/ and add
+// its name to this Set. To revert to live: remove it from the Set.
+// You can also set STATIC_PAGES_AUTO_DETECT = true to skip the list
+// and just try Spages/ first for every page (falls back if 404).
+// ─────────────────────────────────────────────────────────────────────
+const STATIC_PAGES_AUTO_DETECT = false; // set true to skip the list below
+
+const STATIC_PAGES = new Set([
+    'canvas',
+    'hac',
+    'settings',
+    'todo',
+    // add more page names here as you create static versions
+]);
+
 async function loadPage(pageName, btn) {
     document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
     if (btn) btn.classList.add('active');
@@ -184,8 +201,29 @@ async function loadPage(pageName, btn) {
     if (!container) return;
 
     if (!pageCache[pageName]) {
-        const response = await fetch(`Spages/${pageName}.html`);
-        pageCache[pageName] = await response.text();
+        // Decide which folder to try first
+        const useStatic = STATIC_PAGES_AUTO_DETECT || STATIC_PAGES.has(pageName);
+        let html = null;
+
+        if (useStatic) {
+            // Try Spages/ first
+            const res = await fetch(`Spages/${pageName}.html`);
+            if (res.ok) {
+                html = await res.text();
+                console.log(`[router] Loaded static: Spages/${pageName}.html`);
+            } else {
+                console.log(`[router] Spages/${pageName}.html not found — falling back to pages/`);
+            }
+        }
+
+        // Fall back to pages/ if no static version found
+        if (!html) {
+            const res = await fetch(`pages/${pageName}.html`);
+            html = await res.text();
+            console.log(`[router] Loaded live: pages/${pageName}.html`);
+        }
+
+        pageCache[pageName] = html;
     }
     container.innerHTML = pageCache[pageName];
 
