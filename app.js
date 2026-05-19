@@ -373,6 +373,10 @@ async function fetchEmails(loadMore = false) {
                     // OPENING THE EMAIL
                     bodyDiv.style.display = "block";
                     
+                    // Remove height restrictions
+                    bodyDiv.style.maxHeight = "none";
+                    bodyDiv.style.overflowY = "visible";
+                    
                     // NUCLEAR OVERRIDES: Force the card to let the content spill out and grow
                     card.style.height = "auto";
                     card.style.maxHeight = "none";
@@ -386,6 +390,10 @@ async function fetchEmails(loadMore = false) {
                 } else {
                     // CLOSING THE EMAIL
                     bodyDiv.style.display = "none";
+                    
+                    // Reset height restrictions
+                    bodyDiv.style.maxHeight = "400px";
+                    bodyDiv.style.overflowY = "auto";
                     
                     const icon = headerDiv.querySelector('i');
                     if (icon) {
