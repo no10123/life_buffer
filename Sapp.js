@@ -699,3 +699,49 @@ function initZipper() {
         finally { dlBtn.disabled = false; }
     };
 }
+
+let aiWidgetLoaded = false;
+
+async function toggleAIWidget() {
+    const overlay = document.getElementById('ai-overlay');
+    const icon = document.querySelector('#ai-toggle-btn i');
+
+    // Toggle the 'active' class on the overlay
+    overlay.classList.toggle('active');
+
+    if (overlay.classList.contains('active')) {
+        // We just opened it! Change icon to an X
+        icon.className = 'fa-solid fa-xmark';
+        
+        // If it's the first time opening it, fetch the HTML
+        if (!aiWidgetLoaded) {
+            overlay.innerHTML = '<div style="padding: 20px; text-align: center; color: #666;"><i class="fa-solid fa-spinner fa-spin"></i> Booting AI...</div>';
+            
+            try {
+                // Adjust this path if your AI.html isn't inside the pages/ folder
+                const response = await fetch(`pages/AI.html?v=${Date.now()}`);
+                if (!response.ok) throw new Error("AI page not found.");
+                
+                const html = await response.text();
+                overlay.innerHTML = html;
+                
+                // Force script execution for the AI logic
+                const scripts = overlay.querySelectorAll("script");
+                scripts.forEach(oldScript => {
+                    const newScript = document.createElement("script");
+                    Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+                    newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+                    oldScript.parentNode.removeChild(oldScript);
+                    document.body.appendChild(newScript);
+                });
+
+                aiWidgetLoaded = true; // Mark as loaded so we don't fetch it again
+            } catch (err) {
+                overlay.innerHTML = `<div style="padding: 20px; color: red;">Error: ${err.message}</div>`;
+            }
+        }
+    } else {
+        // We closed it! Change icon back to the robot
+        icon.className = 'fa-solid fa-robot';
+    }
+}
