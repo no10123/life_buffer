@@ -1,0 +1,57 @@
+<section id="html-editor-container" style="padding: 20px; display: flex; flex-direction: column; height: calc(100vh - 180px); font-family: 'Inter', sans-serif;">
+    
+    <header style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+        <div>
+            <h1 style="margin: 0; font-size: 1.5rem; color: #2c3e50;"><i class="fa-solid fa-code" style="color: #6366f1;"></i> HTML Sandbox</h1>
+            <p style="color: #64748b; font-size: 0.85rem; margin: 3px 0 0 0;">Write raw code and execute it in a clean browser context.</p>
+        </div>
+        <button id="html-run-btn" style="background: #6366f1; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 6px rgba(99, 102, 241, 0.2); transition: background 0.2s;">
+            <i class="fa-solid fa-arrow-up-right-from-square"></i> Open in New Page
+        </button>
+    </header>
+
+    <div style="flex: 1; position: relative; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.08);">
+        <div style="position: absolute; left: 0; top: 0; bottom: 0; width: 45px; background: #11111b; border-right: 1px solid #313244; display: flex; flex-direction: column; align-items: center; padding-top: 15px; color: #45475a; font-family: monospace; font-size: 0.85rem; line-height: 1.5; select-index: -1; user-select: none;">
+            <div>1</div><div>2</div><div>3</div><div>4</div><div>5</div><div>6</div><div>7</div><div>8</div><div>9</div><div>10</div>
+        </div>
+        
+        <textarea id="html-code-input" spellcheck="false" style="width: 100%; height: 100%; background: #1e1e2e; color: #cdd6f4; border: none; padding: 15px 15px 15px 60px; font-family: 'Fira Code', monospace; font-size: 0.9rem; line-height: 1.5; resize: none; outline: none; box-sizing: border-box;"><!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { font-family: sans-serif; text-align: center; padding-top: 50px; background: #f0f4f8; }
+        h1 { color: #6366f1; }
+    </style>
+</head>
+<body>
+    <h1>Hello World!</h1>
+    <p>Your custom live preview works perfectly.</p>
+</body>
+</html></textarea>
+    </div>
+
+    <script>
+        (function() {
+            const runBtn = document.getElementById('html-run-btn');
+            const codeInput = document.getElementById('html-code-input');
+
+            if (!runBtn || !codeInput) return;
+
+            runBtn.onclick = () => {
+                const code = codeInput.value;
+                
+                // Open a clean blank browser window instance
+                const newWindow = window.open();
+                
+                if (newWindow) {
+                    // Inject the textarea value straight into the document stream
+                    newWindow.document.open();
+                    newWindow.document.write(code);
+                    newWindow.document.close();
+                } else {
+                    alert("Pop-up blocked! Please allow pop-ups for this dashboard to view output pages.");
+                }
+            };
+        })();
+    </script>
+</section>

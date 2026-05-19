@@ -61,6 +61,36 @@
     display: flex;
 }
 
+/* Enable scrolling for the app list container */
+#sidebar-nav {
+    flex: 1;                /* Forces the list to claim all available middle space */
+    overflow-y: auto;       /* Adds a vertical scrollbar ONLY when items overflow */
+    overflow-x: hidden;     /* Keeps horizontal scrolling completely disabled */
+    padding-right: 5px;     /* Leaves a tiny gap so the scrollbar doesn't hug the text */
+    list-style: none;       /* Ensures no default bullet points show up */
+    margin: 0;
+    padding-left: 0;
+}
+
+/* --- OPTIONAL: Sleek Modern Scrollbar Styles --- */
+/* This prevents a giant, clunky default browser scrollbar from ruining the dark aesthetic */
+#sidebar-nav::-webkit-scrollbar {
+    width: 6px;             /* Makes the scrollbar very thin and clean */
+}
+
+#sidebar-nav::-webkit-scrollbar-track {
+    background: transparent;/* Keeps the track invisible */
+}
+
+#sidebar-nav::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15); /* Soft, semi-transparent white indicator */
+    border-radius: 10px;
+}
+
+#sidebar-nav::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.3);  /* Brightens slightly when hovered */
+}
+
 * {
     margin: 0;
     padding: 0;

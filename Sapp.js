@@ -745,3 +745,88 @@ async function toggleAIWidget() {
         icon.className = 'fa-solid fa-robot';
     }
 }
+
+// A smart map pairing app IDs to clear Font Awesome icons
+const iconMap = {
+    'overview': 'fa-house',
+    'canvas': 'fa-graduation-cap',
+    'todo': 'fa-list-check',
+    'hac': 'fa-chart-line',
+    'gmail': 'fa-envelope',
+    'browser': 'fa-compass',
+    'zipper': 'fa-file-zipper',
+    'widget': 'fa-cubes',
+    'ATLAS': 'fa-map-location-dot',
+    'playlist': 'fa-music',
+    'health': 'fa-heart',
+    'AI': 'fa-robot',
+    'settings': 'fa-gear',
+    'HTML': 'fa-code'
+};
+
+// Builds menu rows directly into the layout from your back-end server engine
+async function initSidebar() {
+    const sidebarNav = document.getElementById('sidebar-nav');
+    if (!sidebarNav) return;
+
+    try {
+        // Fetches file array built automatically by server.js readdir logic
+        const response = await fetch('/api/pages');
+        const pages = await response.json();
+
+        sidebarNav.innerHTML = pages.map(page => {
+            const iconClass = iconMap[page.id] || 'fa-rocket';
+            const isActive = page.id === 'overview' ? 'active' : '';
+            
+            return `
+                <li>
+                    <button class="nav-btn ${isActive}" data-page="${page.id}" onclick="loadPage('${page.id}')">
+                        <i class="fa-solid ${iconClass}"></i> ${page.name}
+                    </button>
+                </li>
+            `;
+        }).join('');
+        
+        console.log("Dynamic sidebar system loaded.");
+    } catch (err) {
+        console.error("Dynamic menu assembly failed:", err);
+    }
+}
+
+// Streamlined structural module switcher
+async function loadPage(pageName) {
+    const contentArea = document.getElementById('main-content-area');
+    if (!contentArea) return;
+
+    // Shift active CSS indicators smoothly across dynamic buttons
+    document.querySelectorAll('.nav-btn').forEach(btn => {
+        if (btn.getAttribute('data-page') === pageName) {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+    });
+
+    try {
+        const response = await fetch(`pages/${pageName}.html?v=${Date.now()}`);
+        if (!response.ok) throw new Error("Target framework view unavailable.");
+        
+        const htmlText = await response.text();
+        contentArea.innerHTML = htmlText;
+
+        // Force script execution frames inside standalone modules
+        const scripts = contentArea.querySelectorAll("script");
+        scripts.forEach(oldScript => {
+            const newScript = document.createElement("script");
+            Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+            newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+            oldScript.parentNode.removeChild(oldScript);
+            document.body.appendChild(newScript);
+        });
+
+        console.log(`Successfully loaded: ${pageName}.html`);
+    } catch (err) {
+        console.error(`Page transition error: ${err.message}`);
+        contentArea.innerHTML = `<div style="padding:40px;"><h2>Module Rendering Offline</h2><p>${err.message}</p></div>`;
+    }
+}

@@ -6,9 +6,8 @@
     <title>Student UniDash | Pro</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="style.css">
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
     <div class="dashboard-container">
@@ -17,21 +16,9 @@
                 <i class="fa-solid fa-graduation-cap"></i>
                 <h2>UniDash</h2>
             </div>
-            <ul>
-            <li><button class="nav-btn active" onclick="loadPage('overview', this)"><i class="fa-solid fa-house"></i> Overview</button></li>
-            <li><button class="nav-btn" onclick="loadPage('canvas', this)"><i class="fa-solid fa-graduation-cap"></i> Canvas</button></li>
-            <li><button class="nav-btn" onclick="loadPage('todo', this)"><i class="fa-solid fa-list-check"></i> Todo</button></li>
-            <li><button class="nav-btn" onclick="loadPage('hac', this)"><i class="fa-solid fa-chart-line"></i> HAC Grades</button></li>
-            <li><button class="nav-btn" onclick="loadPage('gmail', this)"><i class="fa-solid fa-envelope"></i> Gmail</button></li>
-            <li><button class="nav-btn" onclick="loadPage('browser', this)"><i class="fa-solid fa-compass"></i> App Browser</button></li>
-            <li><button class="nav-btn" onclick="loadPage('zipper', this)"><i class="fa-solid fa-file-zipper"></i> Zipper</button></li>
-            <li><button class="nav-btn" onclick="loadPage('widget', this)"><i class="fa-solid fa-cubes"></i> WIDGETS</button></li>
-            <li><button class="nav-btn" onclick="loadPage('ATLAS', this)"><i class="fa-solid fa-map-location-dot"></i> ATLAS</button></li>
-            <li><button class="nav-btn" onclick="loadPage('playlist', this)"><i class="fa-solid fa-music"></i> Playlist</button></li>
-            <li><button class="nav-btn" onclick="loadPage('health', this)"><i class="fa-solid fa-heart"></i> Health</button></li>
-            <li><button class="nav-btn" onclick="loadPage('AI', this)"><i class="fa-solid fa-robot"></i> AI</button></li>
-            <li><button class="nav-btn" onclick="loadPage('settings', this)"><i class="fa-solid fa-gear"></i> Settings</button></li>
-            </ul>
+            
+            <ul id="sidebar-nav">
+                </ul>
 
             <div class="mini-player" style="padding: 15px; border-top: 1px solid rgba(255,255,255,0.1); margin-top: auto;">
                 <p id="now-playing-title" style="font-size: 12px; margin-bottom: 8px; color: #cbd5e1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Not Playing</p>
@@ -51,13 +38,24 @@
         </main>
     </div>
 
-    <script src="app.js"></script>
+    <script src="Sapp.js"></script>
     <script src="hac.js"></script>
     <script src="index.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
     <script>
-        // Automatically load the Overview page when the shell loads
-        window.addEventListener('DOMContentLoaded', () => {
-            loadPage('overview', document.querySelector('.nav-btn.active'));
+        window.addEventListener('DOMContentLoaded', async () => {
+            console.log("Shell loaded. Initializing systems...");
+            
+            // 1. Build the dynamic navigation menu
+            if (typeof initSidebar === 'function') {
+                await initSidebar();
+            }
+            
+            // 2. Load the default active layout view
+            if (typeof loadPage === 'function') {
+                loadPage('overview');
+            }
         });
     </script>
 
@@ -70,13 +68,15 @@
     </div>
 
     <script>
-        // Backtick (`) key toggles the console
+        function toggleConsole() {
+            const consoleEl = document.getElementById('debug-console');
+            consoleEl.style.display = consoleEl.style.display === 'none' ? 'block' : 'none';
+        }
+
         document.addEventListener('keydown', (e) => {
             if (e.key === '`') toggleConsole();
         });
-    </script>
-    
-    <script>
+
         const logContainer = document.getElementById('debug-logs');
         const originalLog = console.log;
         const originalError = console.error;
@@ -100,13 +100,10 @@
         
         console.log("Debugger Initialized");
     </script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
     <button id="ai-toggle-btn" onclick="toggleAIWidget()">
-    <i class="fa-solid fa-robot"></i>
+        <i class="fa-solid fa-robot"></i>
     </button>
-
-    <div id="ai-overlay">
-        </div>
-
+    <div id="ai-overlay"></div>
 </body>
 </html>
