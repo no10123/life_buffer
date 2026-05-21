@@ -761,21 +761,39 @@ const iconMap = {
     'health': 'fa-heart',
     'AI': 'fa-robot',
     'settings': 'fa-gear',
-    'HTML': 'fa-code'
+    'HTML': 'fa-code',
+    'clock': 'fa-clock'
 };
 
-// Builds menu rows directly into the layout from your back-end server engine
+// Builds menu rows directly into the layout
 async function initSidebar() {
     const sidebarNav = document.getElementById('sidebar-nav');
     if (!sidebarNav) return;
 
-    try {
-        // Fetches file array built automatically by server.js readdir logic
-        const response = await fetch('/api/pages');
-        const pages = await response.json();
+    // We define your pages manually here so no back-end API is needed!
+    // To add a new app, just add a new row to this array.
+    const pages = [
+        { id: 'overview', name: 'Overview' },
+        { id: 'canvas', name: 'Canvas' },
+        { id: 'todo', name: 'Todo' },
+        { id: 'hac', name: 'HAC Grades' },
+        { id: 'gmail', name: 'Gmail' },
+        { id: 'browser', name: 'App Browser' },
+        { id: 'zipper', name: 'Zipper' },
+        { id: 'widget', name: 'WIDGETS' },
+        { id: 'ATLAS', name: 'ATLAS' },
+        { id: 'playlist', name: 'Playlist' },
+        { id: 'health', name: 'Health' },
+        { id: 'clock', name: 'Clock' },      // <-- Your new clock!
+        { id: 'HTML', name: 'HTML Editor' }, // <-- Your new code sandbox!
+        { id: 'AI', name: 'AI' },
+        { id: 'settings', name: 'Settings' }
+    ];
 
+    try {
         sidebarNav.innerHTML = pages.map(page => {
-            const iconClass = iconMap[page.id] || 'fa-rocket';
+            // It grabs the icon from your iconMap, defaults to a rocket if missing
+            const iconClass = iconMap[page.id] || 'fa-rocket'; 
             const isActive = page.id === 'overview' ? 'active' : '';
             
             return `
@@ -787,9 +805,9 @@ async function initSidebar() {
             `;
         }).join('');
         
-        console.log("Dynamic sidebar system loaded.");
+        console.log("Local sidebar system loaded successfully.");
     } catch (err) {
-        console.error("Dynamic menu assembly failed:", err);
+        console.error("Menu assembly failed:", err);
     }
 }
 
