@@ -7,8 +7,8 @@
 const MY_COURSES = [
     { name: "AP CS",      link: "https://learn.irvingisd.net/courses/94227", grade: 100, teacher: "Dawson"   },
     { name: "AP Lang",    link: "https://learn.irvingisd.net/courses/93797", grade: 83,  teacher: "Evidente" },
-    { name: "AP Physics", link: "https://learn.irvingisd.net/courses/94111", grade: 0,   teacher: "Mosely"   },
-    { name: "AP World",   link: "https://learn.irvingisd.net/courses/94209", grade: 95,  teacher: "Swegler"  },
+    { name: "AP Physics", link: "https://learn.irvingisd.net/courses/94111", grade: 94,   teacher: "Mosely"   },
+    { name: "AP World",   link: "https://learn.irvingisd.net/courses/94209", grade: 99,  teacher: "Swegler"  },
     { name: "Networking", link: "https://learn.irvingisd.net/courses/94351", grade: 100, teacher: "Cambell"  },
     { name: "DC Pre-Cal", link: "https://learn.irvingisd.net/courses/93956", grade: 91,  teacher: "Arayal"   },
     { name: "TAFCS",      link: "https://learn.irvingisd.net/courses/93956", grade: 100, teacher: "Keller"   },
