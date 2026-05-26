@@ -160,40 +160,47 @@ async function canvasApiRequest(config, path, method = 'GET', body = null) {
 async function loadPage(pageName, btn) {
     const contentArea = document.getElementById('main-content-area');
     if (!contentArea) {
-        console.error("CRITICAL: #main-content-area not found.");
+        console.error("CRITICAL: #main-content-area missing from DOM");
         return;
     }
 
-    // --- Update sidebar active state ---
+    // Update sidebar highlight
     document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
     if (btn) btn.classList.add('active');
 
     try {
-        // Cache-bust so Chromebook never serves a stale page
-        const response = await fetch(`pages/${pageName}.html?v=${Date.now()}`);
-        if (!response.ok) throw new Error(`${response.status} — pages/${pageName}.html not found`);
+        const url = `pages/${pageName}.html?v=${Date.now()}`;
+        console.log(`Fetching: ${url}`);
 
-        // .text() only — never call both .json() and .text() on the same response
+        const response = await fetch(url);
+        console.log(`Response status: ${response.status} for ${pageName}`);
+
+        // ✅ ONLY call .text() — NEVER call .json() on an HTML page
+        // Calling .json() first consumes the body and causes .text() to throw,
+        // which is what's making your catch block show "404 Page not found"
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: pages/${pageName}.html not found on server`);
+        }
+
         const html = await response.text();
+        console.log(`Got ${html.length} bytes for ${pageName}`);
+
         contentArea.innerHTML = html;
 
-        // Re-execute any <script> tags injected with the page HTML
-        // (innerHTML doesn't run scripts automatically)
-        contentArea.querySelectorAll('script').forEach(oldScript => {
-            const newScript = document.createElement('script');
-            Array.from(oldScript.attributes).forEach(attr =>
-                newScript.setAttribute(attr.name, attr.value)
-            );
-            newScript.textContent = oldScript.textContent;
-            oldScript.replaceWith(newScript);
+        // Re-run any <script> tags in the injected HTML
+        contentArea.querySelectorAll('script').forEach(old => {
+            const s = document.createElement('script');
+            Array.from(old.attributes).forEach(a => s.setAttribute(a.name, a.value));
+            s.textContent = old.textContent;
+            old.replaceWith(s);
         });
 
-        // Fade-in animation
+        // Fade animation
         contentArea.classList.remove('animate-fade-in');
-        void contentArea.offsetWidth; // force reflow
+        void contentArea.offsetWidth;
         contentArea.classList.add('animate-fade-in');
 
-        // --- Page-specific init hooks ---
+        // Page init hooks
         const hooks = {
             gmail:    () => { if (accessToken) fetchEmails(); },
             canvas:   loadCanvasData,
@@ -205,18 +212,16 @@ async function loadPage(pageName, btn) {
         };
         hooks[pageName]?.();
 
-        console.log(`Loaded: pages/${pageName}.html`);
+        console.log(`✅ Loaded: ${pageName}`);
 
     } catch (err) {
-        console.error('loadPage error: ' + err.message);
+        console.error(`loadPage FAILED for "${pageName}": ${err.message}`);
         contentArea.innerHTML = `
             <div style="text-align:center; margin-top:60px;">
                 <i class="fa-solid fa-triangle-exclamation" style="font-size:48px; color:var(--warning);"></i>
-                <h2 style="margin-top:16px;">Module Not Found</h2>
-                <p style="color:var(--text-muted); margin-top:8px;">
-                    Make sure <strong>pages/${pageName}.html</strong> exists.
-                </p>
-                <p style="color:#ef4444; font-size:12px; margin-top:8px;">${err.message}</p>
+                <h2 style="margin-top:16px;">Failed to load: ${pageName}</h2>
+                <p style="color:var(--text-muted); margin-top:8px;">Check the debug console (press \` to open)</p>
+                <code style="display:block; margin-top:12px; background:#f1f5f9; padding:10px; border-radius:8px; font-size:12px; color:#ef4444;">${err.message}</code>
             </div>`;
     }
 }
